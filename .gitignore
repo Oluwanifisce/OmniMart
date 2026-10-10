@@ -1,9 +1,8 @@
-# Exclude frontend completely from this push
-client/
-
 # Exclude secrets and dependencies
 .env
 .env.local
 node_modules/
 backend/node_modules/
+client/node_modules/
+client/dist/
 .DS_Store
