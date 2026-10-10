@@ -90,6 +90,7 @@ const Home = () => {
     : userCategory
 
   const handleCategoryChange = (newCat) => {
+    setProducts([])
     setUserCategory(newCat)
     setSelectedSubcat('')
     setPage(1)
