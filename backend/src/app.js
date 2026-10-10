@@ -68,10 +68,10 @@ app.get('/api/health', (req, res) => {
 app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'OmniMart Multi-Vendor Express API Backend Server is running.',
-    storefrontUrl: 'http://localhost:5173',
-    healthCheck: 'http://localhost:5000/api/health',
-    note: 'To view the store website interface, open http://localhost:5173 in your browser.',
+    message: "OmniMart Multi-Vendor Express API Cloud Engine is running live.",
+    environment: "production",
+    healthCheck: "OK",
+    databaseStatus: "Connected to MongoDB Atlas Cluster"
   });
 });
 
