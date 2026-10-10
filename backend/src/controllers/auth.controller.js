@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -51,6 +52,12 @@ const registerUser = async (req, res) => {
       });
     }
 
+    // Check for existing user before sending OTP
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({ message: 'user already exist' });
+    }
+
     if (process.env.NODE_ENV === 'test' && mongoose.connection.readyState === 0) {
       const token = generateToken({ _id: 'mock-id-123', email: email.toLowerCase(), role: role === 'customer' ? 'user' : role });
       return res.status(201).json({
@@ -64,12 +71,6 @@ const registerUser = async (req, res) => {
           token,
         },
       });
-    }
-
-    // Check for existing user before sending OTP
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
-      return res.status(400).json({ message: 'user already exist' });
     }
 
     // Generate 6-digit OTP
