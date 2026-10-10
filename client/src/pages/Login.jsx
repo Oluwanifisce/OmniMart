@@ -181,32 +181,6 @@ const Login = () => {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="d-flex align-items-center my-4">
-            <hr style={{ flex: 1, borderColor: '#E2E8F0' }} />
-            <span style={{ padding: '0 12px', fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>OR</span>
-            <hr style={{ flex: 1, borderColor: '#E2E8F0' }} />
-          </div>
-
-          {/* Google Sign-In button */}
-          <button
-            type="button"
-            className="btn w-100 d-flex align-items-center justify-content-center gap-2"
-            style={{
-              border: '1px solid #E2E8F0', background: '#fff', color: '#0F172A',
-              fontWeight: 600, fontSize: '13px', padding: '10px', borderRadius: '4px',
-            }}
-            onClick={() => handleGoogleLogin()}
-          >
-            <svg width="18" height="18" viewBox="0 0 48 48">
-              <path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z"/>
-              <path fill="#34A853" d="M6.3 14.7l7 5.1C15.1 16 19.2 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 16.3 2 9.7 7.4 6.3 14.7z"/>
-              <path fill="#FBBC05" d="M24 46c5.9 0 10.9-2 14.5-5.3l-6.7-5.5C29.8 36.8 27 38 24 38c-6 0-10.6-4-12.3-9.5l-7 5.4C8.1 41.3 15.5 46 24 46z"/>
-              <path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-.8 2.3-2.3 4.3-4.3 5.7l6.7 5.5C42 36.5 46 31 46 24c0-1.3-.2-2.7-.5-4z"/>
-            </svg>
-            Continue with Google
-          </button>
-
           <p className="text-center mt-4" style={{ fontSize: '13px', color: '#64748B' }}>
             No account?{' '}
             <Link to="/register" style={{ color: '#0F172A', fontWeight: 600 }}>Create one →</Link>

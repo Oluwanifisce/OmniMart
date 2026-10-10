@@ -24,18 +24,15 @@ app.use(
   })
 );
 
-// Restructured CORS configuration (No generic wildcard '*', explicit client origins, credentials: true)
-const allowedOrigins = [
-  process.env.CLIENT_URL,
-  process.env.FRONTEND_URL,
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'http://localhost:3000',
-].filter(Boolean);
-
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, or server-to-server) or from Vercel / localhost
+      if (!origin || origin.includes('vercel.app') || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
   })
 );
