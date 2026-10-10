@@ -1,0 +1,266 @@
+{
+  "info": {
+    "_postman_id": "omnimart-api-collection-2026",
+    "name": "OmniMart Multi-Vendor API (Complete Platform)",
+    "description": "Complete REST API collection for OmniMart including Auth, Admin, Vendor, Products, Shopping Cart, Multi-Vendor Orders & Fulfillment, Product Reviews, and Image Uploads.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Authentication (/api/v1)",
+      "item": [
+        {
+          "name": "Register Customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"Jane\",\n  \"lastname\": \"Customer\",\n  \"email\": \"customer@omnimart.com\",\n  \"password\": \"CustomerPass123!\",\n  \"role\": \"user\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "register"]
+            }
+          }
+        },
+        {
+          "name": "Register Vendor",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstname\": \"Alex\",\n  \"lastname\": \"TechStore\",\n  \"email\": \"techstore@omnimart.com\",\n  \"password\": \"VendorPass123!\",\n  \"role\": \"vendor\",\n  \"storeName\": \"TechZone Electronics\",\n  \"description\": \"Premium gadgets & audio gear\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vendor/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vendor", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login User / Vendor / Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.token) {",
+                  "    if (jsonData.data.role === 'admin') {",
+                  "        pm.environment.set('adminToken', jsonData.data.token);",
+                  "    } else if (jsonData.data.role === 'vendor') {",
+                  "        pm.environment.set('vendorToken', jsonData.data.token);",
+                  "    } else {",
+                  "        pm.environment.set('customerToken', jsonData.data.token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@omnimart.com\",\n  \"password\": \"AdminPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Admin Operations (/api/v1/admin)",
+      "item": [
+        {
+          "name": "Get Platform Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/analytics",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "admin", "analytics"]
+            }
+          }
+        },
+        {
+          "name": "Get Global Orders & Revenue Breakdown",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/admin/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "orders", "admin", "all"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Vendor Operations (/api/v1/vendor)",
+      "item": [
+        {
+          "name": "Create Product (Approved Vendor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{vendorToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"OmniBook Pro 16 Laptop\",\n  \"description\": \"High performance laptop with M3 Max processor\",\n  \"price\": 1899.99,\n  \"categories\": [\"Electronics\", \"Computers\"],\n  \"stock\": 25\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vendor/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vendor", "products"]
+            }
+          }
+        },
+        {
+          "name": "Get Vendor Store Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{vendorToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/vendor/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "orders", "vendor", "list"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Shopping Cart & Orders (/api/v1/cart & /api/v1/orders)",
+      "item": [
+        {
+          "name": "Get Customer Cart",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "cart"]
+            }
+          }
+        },
+        {
+          "name": "Add Item to Cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/cart",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "cart"]
+            }
+          }
+        },
+        {
+          "name": "Checkout Order from Cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shippingAddress\": {\n    \"street\": \"123 Commerce Way\",\n    \"city\": \"New York\",\n    \"state\": \"NY\",\n    \"postalCode\": \"10001\",\n    \"country\": \"USA\"\n  },\n  \"paymentMethod\": \"Credit Card\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "orders"]
+            }
+          }
+        },
+        {
+          "name": "Get Customer Order History",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/orders/my-orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "orders", "my-orders"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Product Reviews (/api/v1/products/:id/reviews)",
+      "item": [
+        {
+          "name": "Post Product Review & Rating",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{customerToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Amazing laptop! Super fast build quality and screen resolution.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/reviews",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "products", "{{productId}}", "reviews"]
+            }
+          }
+        },
+        {
+          "name": "Get Product Reviews",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/products/{{productId}}/reviews",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "products", "{{productId}}", "reviews"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "name": "omnimart-monorepo",
+  "version": "1.0.0",
+  "description": "Multi-vendor MERN stack e-commerce platform monorepo",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix client run dev",
+    "start": "npm --prefix backend start",
+    "test": "npm --prefix backend test",
+    "test:backend": "npm --prefix backend test",
+    "seed": "npm --prefix backend run seed",
+    "install:all": "npm install && npm --prefix backend install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "keywords": [
+    "mern",
+    "e-commerce",
+    "multi-vendor",
+    "express",
+    "mongoose",
+    "react"
+  ],
+  "author": "OmniMart Team",
+  "license": "ISC"
+}
