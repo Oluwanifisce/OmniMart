@@ -110,7 +110,6 @@ const Navbar = () => {
           </div>
 
           <Link to="/shop?sort=newest" className="omni-nav-link">New Arrivals</Link>
-          <Link to="/shop?category=Beauty+%26+Cosmetics" className="omni-nav-link omni-nav-sale">Sale</Link>
 
           {user?.role === 'vendor' && (
             <Link to="/vendor" className="omni-nav-link">Vendor Portal</Link>

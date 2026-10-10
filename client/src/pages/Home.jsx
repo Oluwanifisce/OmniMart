@@ -93,10 +93,21 @@ const Home = () => {
     setProducts([])
     setUserCategory(newCat)
     setSelectedSubcat('')
+    setSort('')
     setPage(1)
     if (newCat) setSearchParams({ category: newCat })
     else        setSearchParams({})
   }
+
+  // Smooth scroll to catalog view on category or search parameter change
+  useEffect(() => {
+    if (category || searchParams.get('category') || searchParams.get('sort')) {
+      const targetElement = document.getElementById('catalog-view') || productsRef.current
+      if (targetElement) {
+        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }
+  }, [category, searchParams])
 
   // Cycle hero slides every 5s
   useEffect(() => {
@@ -464,7 +475,7 @@ const Home = () => {
         ══════════════════════════════════════════════ */}
         {/* Scroll anchor — hero CTA targets this */}
         <div ref={productsRef} style={{ scrollMarginTop: '80px' }} />
-        <section className="products-section">
+        <section className="products-section" id="catalog-view" style={{ scrollMarginTop: '80px' }}>
           <div className="section-header">
             <h2 className="section-title">
               {category ? category : search ? `"${search}"` : 'New Collections'}
