@@ -8,7 +8,7 @@ import AdminAnalytics from './admin/AdminAnalytics'
 import AdminCatalog   from './admin/AdminCatalog'
 import AdminOrders    from './admin/AdminOrders'
 import AdminUsers     from './admin/AdminUsers'
-import AdminContent   from './admin/AdminContent'
+
 import AdminVendors   from './admin/AdminVendors'
 
 // ── Sidebar nav structure ──────────────────────────────────────────────────
@@ -31,7 +31,6 @@ const NAV_SECTIONS = [
     group: 'Platform',
     items: [
       { id: 'users',     icon: '◷', label: 'Users & Access'    },
-      { id: 'content',   icon: '✦', label: 'Content & Marketing'},
     ],
   },
 ]
@@ -42,7 +41,6 @@ const SECTION_TITLES = {
   orders:    'Order Orchestration',
   vendors:   'Vendor Management',
   users:     'User & Access Control',
-  content:   'Content & Marketing',
 }
 
 const AdminDashboard = () => {
@@ -58,7 +56,6 @@ const AdminDashboard = () => {
     orders:    AdminOrders,
     vendors:   AdminVendors,
     users:     AdminUsers,
-    content:   AdminContent,
   }[section] || AdminAnalytics
 
   return (

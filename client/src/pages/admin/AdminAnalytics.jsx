@@ -101,7 +101,7 @@ const AdminAnalytics = () => {
   ]
   const maxDist = Math.max(...orderStatusDist.map(x => x.value), 1)
 
-  const fmt = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n)
+  const fmt = n => `₦${Number(n || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
@@ -214,7 +214,7 @@ const AdminAnalytics = () => {
                     </td>
                     <td>{c.firstname} {c.lastname}</td>
                     <td style={{ color:'#94A3B8' }}>{new Date(o.createdAt).toLocaleDateString()}</td>
-                    <td style={{ fontWeight:700, color:'#10B981' }}>${(o.totalAmount||o.totalPrice||0).toFixed(2)}</td>
+                    <td style={{ fontWeight:700, color:'#10B981' }}>₦{(o.totalAmount||o.totalPrice||0).toLocaleString('en-NG')}</td>
                     <td><span className={`admin-badge admin-badge-${o.status||'pending'}`}>{o.status||'pending'}</span></td>
                   </tr>
                 )

@@ -52,6 +52,7 @@ const Register = () => {
   const navigate  = useNavigate()
   const { login } = useAuth()
   const [isVendor, setIsVendor] = useState(false)
+  const [showPass, setShowPass] = useState(false)
   
   // OTP verification stage state
   const [otpStage, setOtpStage] = useState(false)
@@ -309,7 +310,45 @@ const Register = () => {
 
             <FormField formik={formik} name="email" label="Email Address" type="email" placeholder="you@example.com" />
             <FormField formik={formik} name="phone" label="Phone Number" placeholder="e.g., 0803 123 4567" />
-            <FormField formik={formik} name="password" label="Password" type="password" placeholder="Min. 8 characters" />
+
+            {/* Password field with visibility toggle */}
+            <div className="mb-3" style={{ position: 'relative' }}>
+              <label htmlFor="password" className="form-label"
+                style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase',
+                  letterSpacing: '.05em', color: '#64748B' }}>
+                Password
+              </label>
+              <input
+                id="password"
+                type={showPass ? 'text' : 'password'}
+                name="password"
+                placeholder="Min. 8 characters"
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                value={formik.values.password}
+                style={{ paddingRight: '44px' }}
+                className={`form-control ${
+                  formik.touched.password && formik.errors.password ? 'is-invalid'
+                  : formik.touched.password && !formik.errors.password ? 'is-valid' : ''
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass(p => !p)}
+                style={{
+                  position: 'absolute', right: '12px', top: '32px',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: '#94A3B8', padding: 0, fontSize: '16px',
+                }}
+                tabIndex={-1}
+                aria-label={showPass ? 'Hide password' : 'Show password'}
+              >
+                {showPass ? '🙈' : '👁️'}
+              </button>
+              {formik.touched.password && formik.errors.password && (
+                <div className="invalid-feedback">{formik.errors.password}</div>
+              )}
+            </div>
 
             {/* Vendor-only fields */}
             {isVendor && (

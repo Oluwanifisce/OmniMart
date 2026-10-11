@@ -37,6 +37,14 @@ const getCart = async (req, res, next) => {
  */
 const addToCart = async (req, res, next) => {
   try {
+    // Vendor accounts cannot purchase — they manage stores only
+    if (req.user && req.user.role === 'vendor') {
+      return res.status(403).json({
+        success: false,
+        message: 'Vendor accounts are restricted from purchasing. Please use a separate customer account to shop.',
+      });
+    }
+
     const { productId, quantity = 1 } = req.body;
 
     if (!productId) {

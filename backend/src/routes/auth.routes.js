@@ -8,6 +8,7 @@ const {
   getMe,
   googleAuth,
   verifyOTP,
+  forgotPassword,
 } = require('../controllers/auth.controller');
 
 const router = express.Router();
@@ -27,6 +28,9 @@ router.post('/auth/google', googleAuth);
 // POST /api/v1/auth/verify-otp — Stage 2: verify OTP, create user, send welcome email
 router.post('/auth/verify-otp', verifyOTP);
 
+// POST /api/v1/auth/forgot-password — Send password reset OTP email
+router.post('/auth/forgot-password', forgotPassword);
+
 // GET /api/v1/getusers
 router.get('/getusers', verifyUser, getUsers);
 
@@ -34,4 +38,3 @@ router.get('/getusers', verifyUser, getUsers);
 router.get('/me', verifyUser, getMe);
 
 module.exports = router;
-

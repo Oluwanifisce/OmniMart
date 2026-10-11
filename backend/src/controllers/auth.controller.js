@@ -675,6 +675,59 @@ const googleAuth = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/v1/auth/forgot-password
+ * Sends a 6-digit OTP password reset code to the user's email
+ */
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: 'Email address is required.' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    // Always return success to prevent email enumeration attacks
+    if (!user) {
+      return res.status(200).json({ message: 'If that email is registered, a reset code has been sent.' });
+    }
+
+    // Generate a 6-digit OTP reset code (reuse OTPVerification model)
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    await OTPVerification.findOneAndUpdate(
+      { email: user.email },
+      { email: user.email, otp, expiresAt, purpose: 'password_reset' },
+      { upsert: true, new: true }
+    );
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <h2 style="color: #0F172A; margin-bottom: 16px;">OmniMart Password Reset</h2>
+        <p style="font-size: 15px; line-height: 1.6; color: #334155;">
+          Hello <strong>${user.firstname || 'OmniMart User'}</strong>,<br><br>
+          We received a request to reset your OmniMart account password. Use the code below to proceed. This code expires in <strong>15 minutes</strong>.
+        </p>
+        <div style="text-align: center; margin: 28px 0;">
+          <div style="font-size: 36px; font-weight: 800; letter-spacing: 0.3em; color: #10B981; background: #F0FDF4; padding: 20px; border-radius: 8px; border: 2px dashed #BBF7D0; display: inline-block;">
+            ${otp}
+          </div>
+        </div>
+        <p style="font-size: 13px; color: #64748B;">If you did not request this reset, you can safely ignore this email.</p>
+        <p style="font-size: 13px; color: #64748B; margin-top: 16px;">— The OmniMart Support Team</p>
+      </div>
+    `;
+
+    await sendEmail(user.email, 'OmniMart: Your Password Reset Code', `Your OmniMart password reset code is: ${otp}`, html);
+
+    return res.status(200).json({ message: 'If that email is registered, a reset code has been sent.' });
+  } catch (error) {
+    console.error('[Forgot Password Error]', error.message);
+    return res.status(500).json({ message: 'Failed to send reset email. Please try again.' });
+  }
+};
+
 module.exports = {
   registerUser,
   registerVendor,
@@ -684,6 +737,7 @@ module.exports = {
   verifyUser,
   getMe,
   googleAuth,
+  forgotPassword,
   register: registerUser,
   login: loginUser,
 };

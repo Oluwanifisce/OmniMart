@@ -4,6 +4,7 @@
 import { useFormik } from 'formik'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useGoogleLogin } from '@react-oauth/google'
+import { useState } from 'react'
 import * as yup from 'yup'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
@@ -12,6 +13,7 @@ const Login = () => {
   const navigate       = useNavigate()
   const [searchParams] = useSearchParams()
   const { login }      = useAuth()
+  const [showPass, setShowPass] = useState(false)
 
   const redirectTarget = searchParams.get('redirect')
 
@@ -156,24 +158,58 @@ const Login = () => {
               )}
             </div>
 
-            <div className="mb-4">
+            <div className="mb-4" style={{ position: 'relative' }}>
               <label className="form-label" style={{ fontSize: '11px', fontWeight: 700,
                 textTransform: 'uppercase', letterSpacing: '.05em', color: '#64748B' }}>
                 Password
               </label>
               <input
-                type="password" name="password" placeholder="••••••••"
+                type={showPass ? 'text' : 'password'} name="password" placeholder="••••••••"
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 value={formik.values.password}
+                style={{ paddingRight: '44px' }}
                 className={`form-control ${
                   formik.touched.password && formik.errors.password ? 'is-invalid'
                   : formik.touched.password && !formik.errors.password ? 'is-valid' : ''
                 }`}
               />
+              <button
+                type="button"
+                onClick={() => setShowPass(p => !p)}
+                style={{
+                  position: 'absolute', right: '12px', top: '32px',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: '#94A3B8', padding: 0, fontSize: '16px',
+                }}
+                tabIndex={-1}
+                aria-label={showPass ? 'Hide password' : 'Show password'}
+              >
+                {showPass ? '🙈' : '👁️'}
+              </button>
               {formik.touched.password && formik.errors.password && (
                 <div className="invalid-feedback">{formik.errors.password}</div>
               )}
+            </div>
+
+            <div className="text-end mb-3" style={{ marginTop: '-8px' }}>
+              <button
+                type="button"
+                style={{ background: 'none', border: 'none', padding: 0, fontSize: '12px',
+                  color: '#64748B', cursor: 'pointer', textDecoration: 'underline' }}
+                onClick={async () => {
+                  const email = formik.values.email
+                  if (!email) { formik.setStatus('Enter your email above first, then click Forgot Password.'); return }
+                  try {
+                    await api.post('/auth/forgot-password', { email })
+                    formik.setStatus('✅ Password reset email sent! Check your inbox.')
+                  } catch {
+                    formik.setStatus('Could not send reset email. Please try again.')
+                  }
+                }}
+              >
+                Forgot Password?
+              </button>
             </div>
 
             <button type="submit" className="btn btn-primary w-100" disabled={formik.isSubmitting}>

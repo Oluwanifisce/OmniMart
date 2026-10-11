@@ -56,7 +56,7 @@ const Checkout = () => {
       city: '',
       state: '',
       postalCode: '',
-      country: 'United States',
+      country: 'Nigeria',
       paymentMethod: 'card', // card | paypal | cod
       cardNumber: '',
       cardExp: '',
