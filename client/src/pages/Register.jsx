@@ -80,8 +80,21 @@ const Register = () => {
 
     onSubmit: async (values, { setStatus, setSubmitting }) => {
       try {
-        const endpoint = values.role === 'vendor' ? '/vendor/register' : '/register'
-        const response = await api.post(endpoint, values)
+        const isVendor = values.role === 'vendor'
+        const registrationPayload = {
+          name: `${values.firstname || ''} ${values.lastname || ''}`.trim() || values.name,
+          firstname: values.firstname || values.name?.split(' ')[0] || 'User',
+          lastname: values.lastname || values.name?.split(' ').slice(1).join(' ') || 'Member',
+          email: values.email,
+          password: values.password,
+          role: isVendor ? 'vendor' : 'customer',
+          shopName: isVendor ? (values.shopName || values.storeName) : undefined,
+          storeName: isVendor ? (values.storeName || values.shopName) : undefined,
+          storeDescription: values.storeDescription,
+        }
+
+        const endpoint = isVendor ? '/vendor/register' : '/register'
+        const response = await api.post(endpoint, registrationPayload)
 
         // Vendor registration skips OTP — direct login
         if (values.role === 'vendor') {

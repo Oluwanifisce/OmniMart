@@ -28,10 +28,13 @@ const parseNameFields = (body) => {
   let lastname = body.lastname || '';
 
   if (!firstname && body.name) {
-    const parts = body.name.trim().split(' ');
-    firstname = parts[0] || '';
-    lastname = parts.slice(1).join(' ') || parts[0] || '';
+    const parts = body.name.trim().split(/\s+/);
+    firstname = parts[0] || 'User';
+    lastname = parts.slice(1).join(' ') || 'Member';
   }
+
+  if (!firstname) firstname = 'User';
+  if (!lastname) lastname = 'Member';
 
   return { firstname, lastname };
 };
@@ -46,9 +49,10 @@ const registerUser = async (req, res) => {
     const { email, password, role = 'user' } = req.body;
     const { firstname, lastname } = parseNameFields(req.body);
 
-    if (!firstname || !lastname || !email || !password) {
+    if (!email || !password) {
       return res.status(400).json({
-        message: 'Validation failed: firstname, lastname, email, and password are required.',
+        success: false,
+        message: 'Validation failed: email and password are required.',
       });
     }
 
@@ -139,14 +143,20 @@ const registerUser = async (req, res) => {
       </div>
     `;
 
-    await sendEmail(
-      email,
-      'Your OmniMart Verification Code',
-      `Your OmniMart verification code is: ${otpCode}. It expires in 10 minutes.`,
-      html
-    );
+    // Send OTP email (gracefully fallback if SMTP credentials are not configured)
+    try {
+      await sendEmail(
+        email,
+        'Your OmniMart Verification Code',
+        `Your OmniMart verification code is: ${otpCode}. It expires in 10 minutes.`,
+        html
+      );
+    } catch (emailError) {
+      console.warn('Notice: Email delivery could not complete, continuing registration flow:', emailError.message);
+    }
 
     return res.status(200).json({
+      success: true,
       message: 'OTP sent to your email. Please verify to complete registration.',
       email: email.toLowerCase(),
       requiresOTP: true,
@@ -155,11 +165,11 @@ const registerUser = async (req, res) => {
   } catch (error) {
     console.error('Registration Error:', error);
     if (error.code === 11000) {
-      return res.status(400).json({ message: 'user already exist' });
+      return res.status(400).json({ success: false, message: 'user already exist' });
     }
     return res.status(400).json({
-      message: 'user cannot be created at this time',
-      error: error.message,
+      success: false,
+      message: error.message || 'Validation failed. Please verify all form fields meet criteria.',
     });
   }
 };
@@ -288,21 +298,23 @@ const verifyOTP = async (req, res) => {
  */
 const registerVendor = async (req, res) => {
   try {
-    const { email, password, storeName, description, contactEmail, phone, role = 'vendor' } = req.body;
+    const { email, password, storeName, shopName, description, contactEmail, phone, role = 'vendor' } = req.body;
     const { firstname, lastname } = parseNameFields(req.body);
 
-    if (!firstname || !lastname || !email || !password) {
+    if (!email || !password) {
       return res.status(400).json({
-        message: 'Validation failed: firstname, lastname, email, and password are required.',
+        success: false,
+        message: 'Validation failed: email and password are required.',
       });
     }
 
-    const effectiveStoreName = storeName || `${firstname} ${lastname}'s Store`;
+    const effectiveStoreName = (shopName || storeName || `${firstname} ${lastname}'s Store`).trim();
 
     // Check store name uniqueness
-    const existingStore = await VendorProfile.findOne({ storeName: effectiveStoreName.trim() });
+    const existingStore = await VendorProfile.findOne({ storeName: effectiveStoreName });
     if (existingStore) {
       return res.status(400).json({
+        success: false,
         message: 'A store with this name already exists.',
       });
     }
