@@ -72,15 +72,18 @@ const saveProduct = async (req, res, next) => {
       vendorProfile = await VendorProfile.findOne({ user: req.user.id });
     }
 
+    const effectiveCategory = category || (Array.isArray(categories) && categories[0]) || 'General';
+
     const product = await Product.create({
       vendor: vendorProfile ? vendorProfile._id : req.user.id,
       user: req.user.id,
       title: effectiveTitle.trim(),
       description: description || 'No description provided',
       price: parseFloat(effectivePrice),
-      categories: Array.isArray(categories)
+      category: effectiveCategory,
+      categories: Array.isArray(categories) && categories.length > 0
         ? categories
-        : [category || 'General'],
+        : [effectiveCategory],
       stock: parseInt(effectiveStock || 0),
       images: finalImages,
       isActive: true,
@@ -104,16 +107,30 @@ const saveProduct = async (req, res, next) => {
  */
 const getProducts = async (req, res, next) => {
   try {
+    const { category } = req.query;
     const approvedProfiles = await VendorProfile.find({ verificationStatus: 'approved' }).select('_id').lean();
     const approvedVendorIds = approvedProfiles.map((v) => v._id);
 
-    const products = await Product.find({ isActive: true, vendor: { $in: approvedVendorIds } })
+    const query = {
+      isActive: true,
+      vendor: { $in: approvedVendorIds },
+    };
+
+    if (category) {
+      query.$or = [
+        { category: category },
+        { categories: category },
+      ];
+    }
+
+    const products = await Product.find(query)
       .populate('user', 'firstname lastname email')
       .populate('vendor', 'storeName verificationStatus');
 
     return res.status(200).json({
       message: 'Products fetched successfully',
       data: products,
+      products,
     });
   } catch (error) {
     console.error('getProducts Error:', error);
@@ -148,13 +165,14 @@ const getAllProducts = async (req, res, next) => {
 
     const query = {
       isActive: true,
+      vendor: { $in: approvedVendorIds },
     };
-    if (approvedVendorIds.length > 0) {
-      query.vendor = { $in: approvedVendorIds };
-    }
 
     if (category) {
-      query.categories = { $in: [new RegExp(`^${category}$`, 'i')] };
+      query.$or = [
+        { category: category },
+        { categories: category },
+      ];
     }
 
     if (vendorId) {

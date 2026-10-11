@@ -113,48 +113,7 @@ const Home = () => {
     return () => window.removeEventListener('openCart', h)
   }, [])
 
-  // Map DummyJSON products to standard OmniMart model
-  const mapDummyProduct = (item) => {
-    let cat = 'General'
-    const c = (item.category || '').toLowerCase()
-    if (c.includes('audio') || c.includes('headphone') || c.includes('speaker')) {
-      cat = 'Audio'
-    } else if (c.includes('shirt') || c.includes('dress') || c.includes('top') || c.includes('shoe') || c.includes('apparel') || c.includes('fashion') || c.includes('clot')) {
-      cat = 'Apparel'
-    } else if (c.includes('phone') || c.includes('tablet') || c.includes('electric') || c.includes('gadget') || c.includes('mobile-accessories')) {
-      cat = 'Electronics'
-    } else if (c.includes('laptop') || c.includes('computer') || c.includes('desktop')) {
-      cat = 'Computers'
-    } else if (c.includes('watch') || c.includes('sunglasses') || c.includes('jewel') || c.includes('bag') || c.includes('access')) {
-      cat = 'Accessories'
-    } else if (c.includes('furniture') || c.includes('home') || c.includes('decor') || c.includes('kitchen')) {
-      cat = 'Home & Living'
-    } else if (c.includes('beauty') || c.includes('skin') || c.includes('fragrance') || c.includes('cosmetic')) {
-      cat = 'Beauty & Cosmetics'
-    } else if (c.includes('sport') || c.includes('outdoor') || c.includes('fitness') || c.includes('bicycle')) {
-      cat = 'Sports & Outdoors'
-    }
-
-    return {
-      _id: `dummy-${item.id}`,
-      id: `dummy-${item.id}`,
-      title: item.title,
-      name: item.title,
-      description: item.description,
-      price: item.price,
-      rating: item.rating || 4.5,
-      averageRating: item.rating || 4.5,
-      category: cat,
-      categories: [cat],
-      images: item.images && item.images.length > 0 ? item.images : [item.thumbnail],
-      thumbnail: item.thumbnail,
-      vendor: { storeName: 'Verified Partner Store', isVerified: true },
-      isDummy: true,
-      createdAt: new Date(Date.now() - (item.id || 1) * 86400000).toISOString()
-    }
-  }
-
-  // Load products (Hybrid MongoDB + DummyJSON Engine)
+  // Load products (MongoDB Atlas Only)
   useEffect(() => {
     const makeRequest = async () => {
       try {
@@ -163,77 +122,57 @@ const Home = () => {
         const isNewest = currentSort === 'newest'
         const activeCategory = category || userCategory
 
-        // 1. Fetch Local MongoDB database products
-        let localMongoDBProducts = []
+        // Fetch products directly from authenticated production MongoDB Atlas cluster
+        const params = { limit: 200 }
+        if (activeCategory) {
+          params.category = activeCategory
+        }
+
+        let localProducts = []
         try {
-          const res = await api.get('/products', { params: { limit: 100 } })
-          localMongoDBProducts = res.data.products || res.data.data || []
+          const res = await api.get('/products', { params })
+          localProducts = res.data.products || res.data.data || []
         } catch (e) {
           console.error('Local products fetch error:', e)
         }
 
-        let combinedCatalog = []
+        // Strict category filtering safety to prevent cross-contamination
+        let catalog = activeCategory
+          ? localProducts.filter(p => {
+              const pCat = (p.category || '').toLowerCase()
+              const aCat = activeCategory.toLowerCase()
+              const inCategories = Array.isArray(p.categories) && p.categories.some(c => (c || '').toLowerCase() === aCat)
+              return pCat === aCat || inCategories
+            })
+          : localProducts
 
+        // Apply Search Filter
+        if (search) {
+          const sLower = search.toLowerCase()
+          catalog = catalog.filter(p =>
+            (p.title || p.name || '').toLowerCase().includes(sLower) ||
+            (p.description || '').toLowerCase().includes(sLower)
+          )
+        }
+
+        // Apply Sorting
         if (isNewest) {
-          // New Arrivals mode: filter local products to match selection and showcase ONLY local MongoDB products sorted newest first
-          const filteredLocal = activeCategory
-            ? localMongoDBProducts.filter(p => (p.category || '').toLowerCase() === activeCategory.toLowerCase() || (Array.isArray(p.categories) && p.categories.some(c => (c || '').toLowerCase() === activeCategory.toLowerCase())))
-            : localMongoDBProducts
-          combinedCatalog = [...filteredLocal].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-        } else {
-          // Filter local products to ensure they only match the active category selection
-          const filteredLocalProducts = activeCategory
-            ? localMongoDBProducts.filter(p => p.category?.toLowerCase() === activeCategory.toLowerCase() || (Array.isArray(p.categories) && p.categories.some(c => c.toLowerCase() === activeCategory.toLowerCase())))
-            : localMongoDBProducts
-
-          // Hybrid mode: fetch 50 testing items from public DummyJSON endpoint
-          let dummyJsonProducts = []
-          try {
-            const dummyRes = await fetch('https://dummyjson.com/products?limit=50')
-            if (dummyRes.ok) {
-              const dummyData = await dummyRes.json()
-              dummyJsonProducts = (dummyData.products || []).map(mapDummyProduct)
-            }
-          } catch (e) {
-            console.error('DummyJSON fetch error:', e)
-          }
-
-          // Apply Category Filter to dummy products
-          if (activeCategory) {
-            const catLower = activeCategory.toLowerCase()
-            dummyJsonProducts = dummyJsonProducts.filter(p => (p.category || '').toLowerCase() === catLower)
-          }
-
-          // Compile master catalog ensuring local items stay pinned right at the top
-          combinedCatalog = [...filteredLocalProducts, ...dummyJsonProducts]
-
-          // Apply Search Filter
-          const activeSearch = search
-          if (activeSearch) {
-            const sLower = activeSearch.toLowerCase()
-            combinedCatalog = combinedCatalog.filter(p =>
-              (p.title || p.name || '').toLowerCase().includes(sLower) ||
-              (p.description || '').toLowerCase().includes(sLower)
-            )
-          }
-
-          // Apply Sorting
-          if (currentSort === 'price_asc') {
-            combinedCatalog.sort((a, b) => (a.price || 0) - (b.price || 0))
-          } else if (currentSort === 'price_desc') {
-            combinedCatalog.sort((a, b) => (b.price || 0) - (a.price || 0))
-          } else if (currentSort === 'rating') {
-            combinedCatalog.sort((a, b) => (b.averageRating || b.rating || 0) - (a.averageRating || a.rating || 0))
-          }
+          catalog.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+        } else if (currentSort === 'price_asc') {
+          catalog.sort((a, b) => (a.price || 0) - (b.price || 0))
+        } else if (currentSort === 'price_desc') {
+          catalog.sort((a, b) => (b.price || 0) - (a.price || 0))
+        } else if (currentSort === 'rating') {
+          catalog.sort((a, b) => (b.averageRating || b.rating || 0) - (a.averageRating || a.rating || 0))
         }
 
         // Pagination calculations
         const pageSize = 12
-        const totalItems = combinedCatalog.length
+        const totalItems = catalog.length
         setTotalPages(Math.max(1, Math.ceil(totalItems / pageSize)))
 
         const start = (page - 1) * pageSize
-        setProducts(combinedCatalog.slice(start, start + pageSize))
+        setProducts(catalog.slice(start, start + pageSize))
       } catch (e) {
         console.error('Data loading error:', e)
       } finally {

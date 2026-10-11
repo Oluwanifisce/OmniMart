@@ -73,42 +73,8 @@ const seedData = async () => {
       role: 'user',
     });
 
-    // 5. Create Sample Products for Approved Vendor
-    const products = await Product.create([
-      {
-        vendor: approvedVendorProfile._id,
-        user: approvedVendorUser._id,
-        title: 'OmniBook Pro 16 Laptop',
-        description: 'High performance 16-inch laptop with M3 Max processor, 32GB RAM, and 1TB SSD.',
-        price: 1899.99,
-        categories: ['Electronics', 'Computers'],
-        stock: 25,
-        images: ['https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=500'],
-        isActive: true,
-      },
-      {
-        vendor: approvedVendorProfile._id,
-        user: approvedVendorUser._id,
-        title: 'Noise-Canceling Wireless Headphones',
-        description: 'Active noise cancellation with 40-hour battery life and studio-grade sound quality.',
-        price: 249.99,
-        categories: ['Electronics', 'Audio'],
-        stock: 50,
-        images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500'],
-        isActive: true,
-      },
-      {
-        vendor: approvedVendorProfile._id,
-        user: approvedVendorUser._id,
-        title: 'Ergonomic RGB Mechanical Keyboard',
-        description: 'Custom hot-swappable mechanical keyboard with silent tactile switches.',
-        price: 129.99,
-        categories: ['Electronics', 'Accessories'],
-        stock: 40,
-        images: ['https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=500'],
-        isActive: true,
-      },
-    ]);
+    // 5. Products initialization (Hardcoded TechZone dev-seed products purged)
+    const products = [];
 
     console.log('\n=======================================================');
     console.log('✅ [Seeder] Database Seeded Successfully!');
@@ -119,7 +85,7 @@ const seedData = async () => {
     console.log('   Vendor:   fashionhub@omnimart.com  / VendorPass123! (Pending)');
     console.log('   Customer: customer@omnimart.com   / CustomerPass123!');
     console.log('-------------------------------------------------------');
-    console.log(`📦 Seeded ${products.length} active products for store '${approvedVendorProfile.storeName}'`);
+    console.log('📦 Hardcoded TechZone dev-seed products purged — ready for live vendor uploads');
     console.log('=======================================================\n');
 
     await disconnectDB();

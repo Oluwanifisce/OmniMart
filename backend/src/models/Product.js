@@ -42,6 +42,24 @@ const productSchema = new mongoose.Schema(
       },
       required: [true, 'Currency is required and must be NGN (Naira ₦)'],
     },
+    category: {
+      type: String,
+      default: 'General',
+      enum: {
+        values: [
+          'Apparel',
+          'Electronics',
+          'Computers',
+          'Accessories',
+          'Home & Living',
+          'Beauty & Cosmetics',
+          'Sports & Outdoors',
+          'General',
+          'Audio',
+        ],
+        message: '{VALUE} is not a valid product category',
+      },
+    },
     categories: {
       type: [String],
       required: true,
@@ -92,8 +110,19 @@ const productSchema = new mongoose.Schema(
   }
 );
 
+// Pre-save hook to synchronize category and categories
+productSchema.pre('save', function (next) {
+  if (this.category && (!this.categories || this.categories.length === 0)) {
+    this.categories = [this.category];
+  } else if (this.categories && this.categories.length > 0 && !this.category) {
+    this.category = this.categories[0];
+  }
+  next();
+});
+
 // Indexes for optimized searching and filtering
 productSchema.index({ title: 'text', description: 'text' });
+productSchema.index({ category: 1 });
 productSchema.index({ categories: 1 });
 productSchema.index({ vendor: 1 });
 productSchema.index({ price: 1 });

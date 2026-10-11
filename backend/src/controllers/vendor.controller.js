@@ -87,7 +87,7 @@ const updateVendorProfile = async (req, res, next) => {
  */
 const createProduct = async (req, res, next) => {
   try {
-    const { title, description, price, categories, stock, images, isActive } = req.body;
+    const { title, description, price, categories, category, stock, images, isActive } = req.body;
     const userId = req.user._id || req.user.id;
     const vendorProfile = req.vendorProfile || (await VendorProfile.findOne({ user: userId }));
 
@@ -98,6 +98,7 @@ const createProduct = async (req, res, next) => {
       });
     }
 
+    const effectiveCategory = category || (Array.isArray(categories) && categories[0]) || 'General';
 
     const product = await Product.create({
       vendor: vendorProfile._id,
@@ -105,7 +106,8 @@ const createProduct = async (req, res, next) => {
       title,
       description,
       price,
-      categories: Array.isArray(categories) ? categories : [categories || 'General'],
+      category: effectiveCategory,
+      categories: Array.isArray(categories) && categories.length > 0 ? categories : [effectiveCategory],
       stock: stock !== undefined ? stock : 0,
       images: Array.isArray(images) ? images : [],
       isActive: isActive !== undefined ? isActive : true,
@@ -222,12 +224,19 @@ const updateProduct = async (req, res, next) => {
       });
     }
 
-    const { title, description, price, categories, stock, images, isActive } = req.body;
+    const { title, description, price, categories, category, stock, images, isActive } = req.body;
 
     if (title !== undefined) product.title = title;
     if (description !== undefined) product.description = description;
     if (price !== undefined) product.price = price;
-    if (categories !== undefined) product.categories = Array.isArray(categories) ? categories : [categories];
+    if (category !== undefined) {
+      product.category = category;
+      if (categories === undefined) product.categories = [category];
+    }
+    if (categories !== undefined) {
+      product.categories = Array.isArray(categories) ? categories : [categories];
+      if (category === undefined && product.categories.length > 0) product.category = product.categories[0];
+    }
     if (stock !== undefined) product.stock = stock;
     if (images !== undefined) product.images = Array.isArray(images) ? images : [images];
     if (isActive !== undefined) product.isActive = isActive;
