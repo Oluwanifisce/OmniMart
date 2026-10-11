@@ -69,7 +69,7 @@ const Checkout = () => {
       street: yup.string().required('Please enter your street address'),
       city: yup.string().required('Please enter your city'),
       state: yup.string().required('Please enter your state/province'),
-      postalCode: yup.string().required('Please enter your ZIP / Postal code'),
+      postalCode: yup.string().optional(),
       country: yup.string().required('Country is required'),
       paymentMethod: yup.string().required(),
       cardNumber: yup.string().when('paymentMethod', {
@@ -268,7 +268,7 @@ const Checkout = () => {
                       <input
                         type="text"
                         name="street"
-                        placeholder="123 Main St, Apt 4B"
+                        placeholder="e.g., 24 Adeola Odeku St, Victoria Island"
                         value={formik.values.street}
                         onChange={formik.handleChange}
                         onBlur={formik.handleBlur}
@@ -284,7 +284,7 @@ const Checkout = () => {
                       <input
                         type="text"
                         name="city"
-                        placeholder="New York"
+                        placeholder="e.g., Ikeja"
                         value={formik.values.city}
                         onChange={formik.handleChange}
                         onBlur={formik.handleBlur}
@@ -296,11 +296,11 @@ const Checkout = () => {
                     </div>
 
                     <div className="col-md-4">
-                      <label className="form-label" style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#64748B' }}>State / Province *</label>
+                      <label className="form-label" style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#64748B' }}>State / Region *</label>
                       <input
                         type="text"
                         name="state"
-                        placeholder="NY"
+                        placeholder="e.g., Lagos, Abuja, Rivers"
                         value={formik.values.state}
                         onChange={formik.handleChange}
                         onBlur={formik.handleBlur}
@@ -312,11 +312,11 @@ const Checkout = () => {
                     </div>
 
                     <div className="col-md-4">
-                      <label className="form-label" style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#64748B' }}>ZIP / Postal Code *</label>
+                      <label className="form-label" style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#64748B' }}>Postal Code (Optional)</label>
                       <input
                         type="text"
                         name="postalCode"
-                        placeholder="10001"
+                        placeholder="e.g., 100001 (Optional)"
                         value={formik.values.postalCode}
                         onChange={formik.handleChange}
                         onBlur={formik.handleBlur}
@@ -347,7 +347,7 @@ const Checkout = () => {
                       <input
                         type="tel"
                         name="phone"
-                        placeholder="+1 (555) 000-0000"
+                        placeholder="e.g., 0803 123 4567"
                         value={formik.values.phone}
                         onChange={formik.handleChange}
                         onBlur={formik.handleBlur}
