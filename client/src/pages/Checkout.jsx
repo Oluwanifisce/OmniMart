@@ -17,7 +17,7 @@ const Checkout = () => {
   const [orderComplete, setOrderComplete]   = useState(null)
 
   const formatPrice = (n) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
+    `₦${Number(n || 0).toLocaleString('en-NG')}`
 
   // ── Load cart on mount ──
   useEffect(() => {
@@ -41,8 +41,8 @@ const Checkout = () => {
     (sum, i) => sum + (i.product?.price || i.price || 0) * i.quantity,
     0
   )
-  const shippingFee = shippingOption === 'expedited' ? 14.99 : 0
-  const estimatedTax = itemsSubtotal * 0.08
+  const shippingFee = shippingOption === 'expedited' ? 2500 : 0
+  const estimatedTax = itemsSubtotal * 0.075 // Standard 7.5% Nigerian VAT
   const grandTotal   = itemsSubtotal + shippingFee + estimatedTax
 
   // ── Formik Checkout Form ──
@@ -157,6 +157,24 @@ const Checkout = () => {
               </Link>
             </div>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Vendor Barrier Check ──
+  if (user && user.role === 'vendor') {
+    return (
+      <div style={{ minHeight: '100vh', background: '#F8F9FA', padding: '60px 16px' }}>
+        <div className="text-center p-5 bg-white shadow-sm" style={{ maxWidth: '480px', margin: '0 auto', borderRadius: '8px' }}>
+          <div style={{ fontSize: '48px' }}>🏪</div>
+          <h4 style={{ fontSize: '18px', fontWeight: 700, marginTop: '16px' }}>Shopping Restricted</h4>
+          <p className="text-muted" style={{ fontSize: '13px' }}>
+            Vendor profiles are restricted to store management only. Please create a separate Buyer/Customer account to purchase items!
+          </p>
+          <Link to="/vendor" className="btn btn-dark mt-3 px-4">
+            Go to Vendor Dashboard
+          </Link>
         </div>
       </div>
     )
@@ -471,7 +489,7 @@ const Checkout = () => {
                             <div style={{ fontSize: '11px', color: '#64748B' }}>Priority dispatch with signature required</div>
                           </div>
                         </div>
-                        <strong style={{ fontSize: '13px' }}>$14.99</strong>
+                        <strong style={{ fontSize: '13px' }}>₦2,500</strong>
                       </label>
                     </div>
                   </div>

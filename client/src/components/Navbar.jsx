@@ -78,51 +78,58 @@ const Navbar = () => {
       <div className="omni-navbar-inner">
 
         {/* ── Logo ── */}
-        <Link to="/" className="omni-brand">
+        <Link to={user?.role === 'vendor' ? '/vendor' : '/'} className="omni-brand">
           <BagIcon />
           <span>Omni<span className="omni-brand-accent">Mart</span></span>
         </Link>
 
         {/* ── Nav Links ── */}
         <div className="omni-nav-links">
-          <Link to="/" className={`omni-nav-link ${location.pathname === '/' && !location.search ? 'active' : ''}`}>
-            Home
-          </Link>
-          <Link to="/shop" className="omni-nav-link">Shop</Link>
+          {user?.role === 'vendor' ? (
+            <>
+              <Link to="/vendor" className={`omni-nav-link ${location.pathname === '/vendor' ? 'active' : ''}`}>
+                Vendor Dashboard
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link to="/" className={`omni-nav-link ${location.pathname === '/' && !location.search ? 'active' : ''}`}>
+                Home
+              </Link>
+              <Link to="/shop" className="omni-nav-link">Shop</Link>
 
-          {/* Categories dropdown */}
-          <div className="omni-dropdown-wrap" onMouseEnter={() => setCatOpen(true)} onMouseLeave={() => setCatOpen(false)}>
-            <button className="omni-nav-link omni-nav-btn">
-              Categories <span style={{ fontSize: '10px', marginLeft: '3px' }}>▾</span>
-            </button>
-            {catOpen && (
-              <div className="omni-dropdown">
-                <button className="omni-dropdown-item omni-dropdown-all"
-                  onClick={() => goCategory('')}>All Categories</button>
-                <hr className="omni-dropdown-divider" />
-                {CATEGORIES.map(c => (
-                  <button key={c.label} className="omni-dropdown-item" onClick={() => goCategory(c.label)}>
-                    {c.emoji} {c.label}
-                  </button>
-                ))}
+              {/* Categories dropdown */}
+              <div className="omni-dropdown-wrap" onMouseEnter={() => setCatOpen(true)} onMouseLeave={() => setCatOpen(false)}>
+                <button className="omni-nav-link omni-nav-btn">
+                  Categories <span style={{ fontSize: '10px', marginLeft: '3px' }}>▾</span>
+                </button>
+                {catOpen && (
+                  <div className="omni-dropdown">
+                    <button className="omni-dropdown-item omni-dropdown-all"
+                      onClick={() => goCategory('')}>All Categories</button>
+                    <hr className="omni-dropdown-divider" />
+                    {CATEGORIES.map(c => (
+                      <button key={c.label} className="omni-dropdown-item" onClick={() => goCategory(c.label)}>
+                        {c.emoji} {c.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          <Link to="/shop?sort=newest" className="omni-nav-link">New Arrivals</Link>
+              <Link to="/shop?sort=newest" className="omni-nav-link">New Arrivals</Link>
 
-          {user?.role === 'vendor' && (
-            <Link to="/vendor" className="omni-nav-link">Vendor Portal</Link>
-          )}
-          {user?.role === 'admin' && (
-            <Link to="/admin" className="omni-nav-link">Admin Panel</Link>
+              {user?.role === 'admin' && (
+                <Link to="/admin" className="omni-nav-link">Admin Panel</Link>
+              )}
+            </>
           )}
         </div>
 
         {/* ── Right Actions ── */}
         <div className="omni-nav-actions">
-          {/* Cart */}
-          {!isVendorOrAdminPath && (
+          {/* Cart — hidden for vendors */}
+          {user?.role !== 'vendor' && !isVendorOrAdminPath && (
             <button className="omni-cart-btn" onClick={handleCartClick} aria-label="Open cart">
               <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round"

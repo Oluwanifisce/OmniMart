@@ -47,7 +47,7 @@ const VendorDashboard = () => {
     setTimeout(() => setShowToast(false), 2500)
   }
 
-  const formatPrice = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
+  const formatPrice = n => `₦${Number(n || 0).toLocaleString('en-NG')}`
 
   const resolveImgUrl = (url) => {
     if (!url) return ''
@@ -132,9 +132,10 @@ const VendorDashboard = () => {
       name: '', price: '', stock: '', category: '', description: '',
     },
     validationSchema: yup.object({
-      name:  yup.string().required('Product name is required'),
-      price: yup.number().required('Price is required').min(0),
-      stock: yup.number().required('Stock is required').min(0),
+      name:     yup.string().required('Product name is required'),
+      price:    yup.number().required('Price in Naira (₦) is required').min(0, 'Price must be ₦0 or greater'),
+      stock:    yup.number().required('Stock is required').min(0),
+      category: yup.string().required('Category is required'),
     }),
     onSubmit: async (values, { setStatus, resetForm }) => {
       // Require image on new products
@@ -671,11 +672,11 @@ const VendorDashboard = () => {
               <div className="col-md-6">
                 <label className="form-label" style={{ fontSize: '11px', fontWeight: 700,
                   textTransform: 'uppercase', letterSpacing: '.05em', color: '#64748B' }}>
-                  Price (USD) *
+                  Price (₦) *
                 </label>
-                <input name="price" type="number" step="0.01" min="0"
+                <input name="price" type="number" step="1" min="0"
                   className={`form-control ${productFormik.touched.price && productFormik.errors.price ? 'is-invalid' : ''}`}
-                  placeholder="0.00" {...productFormik.getFieldProps('price')} />
+                  placeholder="e.g. 25000" {...productFormik.getFieldProps('price')} />
                 <div className="invalid-feedback">{productFormik.errors.price}</div>
               </div>
               <div className="col-md-6">
@@ -691,10 +692,31 @@ const VendorDashboard = () => {
               <div className="col-md-6">
                 <label className="form-label" style={{ fontSize: '11px', fontWeight: 700,
                   textTransform: 'uppercase', letterSpacing: '.05em', color: '#64748B' }}>
-                  Category
+                  Category &amp; Subcategory *
                 </label>
-                <input name="category" className="form-control" placeholder="e.g. Apparel"
-                  {...productFormik.getFieldProps('category')} />
+                <select
+                  name="category"
+                  className={`form-select ${productFormik.touched.category && productFormik.errors.category ? 'is-invalid' : ''}`}
+                  {...productFormik.getFieldProps('category')}
+                  required
+                >
+                  <option value="" disabled>Select category / subcategory</option>
+                  <optgroup label="Electronics">
+                    <option value="smartphones">Electronics — Smartphones</option>
+                    <option value="mobile-accessories">Electronics — Mobile Accessories</option>
+                  </optgroup>
+                  <optgroup label="Apparel">
+                    <option value="mens-shirts">Apparel — Men's Shirts</option>
+                    <option value="womens-dresses">Apparel — Women's Dresses</option>
+                    <option value="tops">Apparel — Tops</option>
+                    <option value="shoes">Apparel — Shoes</option>
+                    <option value="watches">Apparel — Watches</option>
+                  </optgroup>
+                  <optgroup label="Computers">
+                    <option value="laptops">Computers — Laptops</option>
+                  </optgroup>
+                </select>
+                <div className="invalid-feedback">{productFormik.errors.category}</div>
               </div>
               <div className="col-md-6">
                 <label className="form-label" style={{ fontSize: '11px', fontWeight: 700,

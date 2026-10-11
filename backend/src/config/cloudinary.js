@@ -13,12 +13,29 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'omnimart_products', // The folder name in your Cloudinary account
+    folder: 'omnimart_products',
     allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
   },
 });
 
-// Initialize Multer with the storage configuration
-const upload = multer({ storage });
+// Stream volatile memory buffer directly to Cloudinary (serverless friendly)
+const uploadStreamToCloudinary = (fileBuffer, folder = 'omnimart_products') => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder, resource_type: 'image' },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+    stream.end(fileBuffer);
+  });
+};
 
-module.exports = { cloudinary, upload };
+// Initialize Multer with memory storage fallback or cloudinary storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
+module.exports = { cloudinary, upload, uploadStreamToCloudinary };

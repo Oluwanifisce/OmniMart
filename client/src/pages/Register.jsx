@@ -62,7 +62,7 @@ const Register = () => {
 
   const formik = useFormik({
     initialValues: {
-      firstname: '', lastname: '', email: '',
+      firstname: '', lastname: '', email: '', phone: '',
       password: '', role: 'customer',
       storeName: '', storeDescription: '',
     },
@@ -71,6 +71,13 @@ const Register = () => {
       firstname: yup.string().required('First name is required').min(2),
       lastname:  yup.string().required('Last name is required'),
       email:     yup.string().email('Invalid email').required('Email is required'),
+      phone:     yup.string()
+        .required('Phone number is required')
+        .test('is-nigerian-phone', 'Please enter a valid Nigerian phone number (e.g., 0803 123 4567 or +234...)', (value) => {
+          if (!value) return false;
+          const clean = value.replace(/[\s-]/g, '');
+          return /^(?:\+234|234|0)[789][01]\d{8}$/.test(clean);
+        }),
       password:  yup.string().required('Password is required').min(8, 'Min. 8 characters'),
       storeName: yup.string().when('role', {
         is: 'vendor',
@@ -86,6 +93,7 @@ const Register = () => {
           firstname: values.firstname || values.name?.split(' ')[0] || 'User',
           lastname: values.lastname || values.name?.split(' ').slice(1).join(' ') || 'Member',
           email: values.email,
+          phone: values.phone,
           password: values.password,
           role: isVendor ? 'vendor' : 'customer',
           shopName: isVendor ? (values.shopName || values.storeName) : undefined,
@@ -279,14 +287,15 @@ const Register = () => {
             <div className="row g-2">
               <div className="col-6">
                 {/* Bug 1 Fix: FormField is stable (defined outside) — no remount on type */}
-                <FormField formik={formik} name="firstname" label="First Name" placeholder="John" />
+                <FormField formik={formik} name="firstname" label="First Name" placeholder="e.g., Obafemi" />
               </div>
               <div className="col-6">
-                <FormField formik={formik} name="lastname" label="Last Name" placeholder="Doe" />
+                <FormField formik={formik} name="lastname" label="Last Name" placeholder="e.g., Awolowo" />
               </div>
             </div>
 
             <FormField formik={formik} name="email" label="Email Address" type="email" placeholder="you@example.com" />
+            <FormField formik={formik} name="phone" label="Phone Number" placeholder="e.g., 0803 123 4567" />
             <FormField formik={formik} name="password" label="Password" type="password" placeholder="Min. 8 characters" />
 
             {/* Vendor-only fields */}

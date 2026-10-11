@@ -3,7 +3,7 @@ const ProductCard = ({ product, inCartCount = 0, onAddToCart, isPreview = false 
   const vendorName = product.vendor?.storeName || product.vendorName || 'Vendor'
 
   const formatPrice = (n) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
+    `₦${Number(n || 0).toLocaleString('en-NG')}`
 
   const stars = (avg = 0) => {
     const full  = Math.round(avg)

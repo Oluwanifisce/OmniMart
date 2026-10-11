@@ -46,7 +46,7 @@ const parseNameFields = (body) => {
  */
 const registerUser = async (req, res) => {
   try {
-    const { email, password, role = 'user' } = req.body;
+    const { email, password, role = 'user', phone } = req.body;
     const { firstname, lastname } = parseNameFields(req.body);
 
     if (!email || !password) {
@@ -123,6 +123,7 @@ const registerUser = async (req, res) => {
         email: email.toLowerCase(),
         password: hashedPassword,
         role: role === 'customer' ? 'user' : role,
+        phone: phone || '',
       },
     });
 
@@ -205,6 +206,7 @@ const verifyOTP = async (req, res) => {
       email: registrationData.email,
       password: registrationData.password, // already hashed
       role: registrationData.role || 'user',
+      phone: registrationData.phone || '',
     });
 
     // Clean up OTP record

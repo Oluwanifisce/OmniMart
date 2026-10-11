@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Offcanvas } from 'react-bootstrap'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import api from '../api/axios'
+import { useAuth } from '../context/AuthContext'
 import ProductCard from '../components/ProductCard'
 
 const DEFAULT_CATEGORIES = [
@@ -68,6 +69,7 @@ const HERO_PRODUCTS = [
 
 const Home = () => {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const productsRef = useRef(null)
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -312,6 +314,10 @@ const Home = () => {
   }
 
   const handleAddToCart = (product) => {
+    if (user && user.role === 'vendor') {
+      alert("Vendor profiles are restricted to store management only. Please create a separate Buyer/Customer account to purchase items!");
+      return;
+    }
     const prodId = product._id
     setCartItems(prev => {
       const idx = prev.findIndex(i => (i.product?._id || i.product || i.productId) === prodId)
@@ -644,7 +650,7 @@ const Home = () => {
                     <div className="flex-grow-1">
                       <div style={{ fontSize:'13px',fontWeight:600,lineHeight:1.3 }}>{title.slice(0,34)}</div>
                       <div style={{ color:'#10B981',fontWeight:800,fontSize:'14px',marginTop:'2px' }}>
-                        ${(price * item.quantity).toFixed(2)}
+                        ₦{Number(price * item.quantity).toLocaleString('en-NG')}
                       </div>
                       <div className="d-flex align-items-center gap-2 mt-2">
                         <button style={{ width:28,height:28,borderRadius:'6px',border:'1.5px solid #E2E8F0',
@@ -665,7 +671,7 @@ const Home = () => {
               <div className="d-flex justify-content-between mt-4"
                 style={{ fontWeight:700,fontSize:'16px',borderTop:'2px solid #0F172A',paddingTop:'16px' }}>
                 <span>Total</span>
-                <span style={{ color:'#10B981' }}>${cartTotal.toFixed(2)}</span>
+                <span style={{ color:'#10B981' }}>₦{Number(cartTotal).toLocaleString('en-NG')}</span>
               </div>
 
               <button className="add-cart-btn" style={{ marginTop:'16px',padding:'13px' }} onClick={handleCheckout}>

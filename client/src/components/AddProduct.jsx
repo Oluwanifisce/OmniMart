@@ -93,7 +93,7 @@ const AddProduct = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="price" className="form-label fw-semibold">Price ($)</label>
+              <label htmlFor="price" className="form-label fw-semibold">Price (₦)</label>
               <input 
                 type="number" 
                 className="form-control" 
@@ -102,14 +102,14 @@ const AddProduct = () => {
                 value={formData.price}
                 onChange={handleInputChange}
                 required 
-                min="0.01" 
-                step="0.01"
-                placeholder="0.00"
+                min="1" 
+                step="1"
+                placeholder="e.g. 25000"
               />
             </div>
 
             <div className="mb-3">
-              <label htmlFor="category" className="form-label fw-semibold">Category</label>
+              <label htmlFor="category" className="form-label fw-semibold">Category &amp; Subcategory</label>
               <select 
                 className="form-select" 
                 id="category" 
@@ -118,10 +118,21 @@ const AddProduct = () => {
                 onChange={handleInputChange}
                 required
               >
-                <option value="" disabled>Select a category</option>
-                {categories.map((cat, idx) => (
-                  <option key={idx} value={cat}>{cat}</option>
-                ))}
+                <option value="" disabled>Select category / subcategory</option>
+                <optgroup label="Electronics">
+                  <option value="smartphones">Electronics — Smartphones</option>
+                  <option value="mobile-accessories">Electronics — Mobile Accessories</option>
+                </optgroup>
+                <optgroup label="Apparel">
+                  <option value="mens-shirts">Apparel — Men's Shirts</option>
+                  <option value="womens-dresses">Apparel — Women's Dresses</option>
+                  <option value="tops">Apparel — Tops</option>
+                  <option value="shoes">Apparel — Shoes</option>
+                  <option value="watches">Apparel — Watches</option>
+                </optgroup>
+                <optgroup label="Computers">
+                  <option value="laptops">Computers — Laptops</option>
+                </optgroup>
               </select>
             </div>
 

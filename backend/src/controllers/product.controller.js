@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const VendorProfile = require('../models/VendorProfile');
+const { uploadStreamToCloudinary } = require('../config/cloudinary');
 
 /**
  * Class-compatible saveProduct / createProd controller
@@ -45,11 +46,25 @@ const saveProduct = async (req, res, next) => {
       finalImages.push(images);
     }
     
-    if (req.file && req.file.path) {
-      finalImages.push(req.file.path);
+    if (req.file) {
+      if (req.file.path) {
+        finalImages.push(req.file.path);
+      } else if (req.file.buffer) {
+        const uploadResult = await uploadStreamToCloudinary(req.file.buffer);
+        if (uploadResult && uploadResult.secure_url) {
+          finalImages.push(uploadResult.secure_url);
+        }
+      }
     }
     if (req.files && req.files.length > 0) {
-      finalImages = finalImages.concat(req.files.map((f) => f.path));
+      for (const f of req.files) {
+        if (f.path) {
+          finalImages.push(f.path);
+        } else if (f.buffer) {
+          const res = await uploadStreamToCloudinary(f.buffer);
+          if (res && res.secure_url) finalImages.push(res.secure_url);
+        }
+      }
     }
 
     let vendorProfile = req.vendorProfile;

@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const VendorProfile = require('../models/VendorProfile');
 const User = require('../models/User');
 const Product = require('../models/Product');
+const sendEmail = require('../utils/emailService');
 
 /**
  * @route   GET /api/admin/vendors
@@ -111,7 +112,31 @@ const updateVendorStatus = async (req, res, next) => {
     }
 
     await vendor.save();
-    await vendor.populate('user', 'name email role');
+    await vendor.populate('user', 'firstname lastname name email role');
+
+    // Trigger Nodemailer approval notification email
+    if (verificationStatus === 'approved') {
+      try {
+        const vendorEmail = vendor.contactEmail || vendor.user?.email;
+        const vendorName = vendor.storeName || vendor.user?.firstname || 'Vendor Partner';
+        if (vendorEmail) {
+          const subject = 'OmniMart Multi-Vendor Account Approved! 🚀';
+          const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <h2 style="color: #10B981; margin-bottom: 16px;">OmniMart Vendor Network</h2>
+              <p style="font-size: 15px; line-height: 1.6; color: #334155;">
+                Hello <strong>${vendorName}</strong>,<br><br>
+                Great news! Your OmniMart Vendor Application has been officially reviewed and fully approved by our administrative panel. Your digital storefront is now active and unlocked. You can log into your dashboard right now to select your native product categories, upload your inventory priced in Naira, and start accepting live customer orders instantly! Welcome to the OmniMart Vendor Network!<br><br>
+                — The OmniMart Admin Core Team
+              </p>
+            </div>
+          `;
+          await sendEmail(vendorEmail, subject, `Hello ${vendorName}, Your OmniMart Vendor Application has been approved!`, html);
+        }
+      } catch (emailErr) {
+        console.warn('Vendor approval email dispatch error:', emailErr.message);
+      }
+    }
 
     return res.status(200).json({
       success: true,

@@ -21,6 +21,11 @@ const userSchema = new mongoose.Schema(
       trim: true,
       match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address'],
     },
+    phone: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     password: {
       type: String,
       // Not required for Google OAuth users (they never set a password)

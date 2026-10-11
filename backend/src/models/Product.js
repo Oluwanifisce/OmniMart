@@ -24,8 +24,23 @@ const productSchema = new mongoose.Schema(
     },
     price: {
       type: Number,
-      required: [true, 'Product price is required'],
-      min: [0, 'Price must be greater than or equal to 0'],
+      required: [true, 'Product price in Naira (₦) is required'],
+      min: [0, 'Price must be greater than or equal to ₦0'],
+      validate: {
+        validator: function (v) {
+          return typeof v === 'number' && !isNaN(v) && v >= 0;
+        },
+        message: 'Price must be an absolute positive whole integer or decimal input in Naira (₦)',
+      },
+    },
+    currency: {
+      type: String,
+      default: 'NGN',
+      enum: {
+        values: ['NGN'],
+        message: 'Currency must be NGN (Naira ₦)',
+      },
+      required: [true, 'Currency is required and must be NGN (Naira ₦)'],
     },
     categories: {
       type: [String],
