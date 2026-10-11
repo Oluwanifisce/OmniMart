@@ -68,17 +68,30 @@ const Register = () => {
     },
 
     validationSchema: yup.object({
-      firstname: yup.string().required('First name is required').min(2),
-      lastname:  yup.string().required('Last name is required'),
-      email:     yup.string().email('Invalid email').required('Email is required'),
-      phone:     yup.string()
+      firstname: yup
+        .string()
+        .required('First name is required')
+        .matches(/^[A-Za-z]+$/, 'Names can only contain alphabetical letters!'),
+      lastname: yup
+        .string()
+        .required('Last name is required')
+        .matches(/^[A-Za-z]+$/, 'Names can only contain alphabetical letters!'),
+      email: yup.string().email('Invalid email').required('Email is required'),
+      phone: yup
+        .string()
         .required('Phone number is required')
         .test('is-nigerian-phone', 'Please enter a valid Nigerian phone number (e.g., 0803 123 4567 or +234...)', (value) => {
           if (!value) return false;
           const clean = value.replace(/[\s-]/g, '');
           return /^(?:\+234|234|0)[789][01]\d{8}$/.test(clean);
         }),
-      password:  yup.string().required('Password is required').min(8, 'Min. 8 characters'),
+      password: yup
+        .string()
+        .required('Password is required')
+        .matches(
+          /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).{8,}$/,
+          'Password must be at least 8 characters and include uppercase, lowercase, and a special character!'
+        ),
       storeName: yup.string().when('role', {
         is: 'vendor',
         then: (s) => s.required('Store name is required for vendors'),

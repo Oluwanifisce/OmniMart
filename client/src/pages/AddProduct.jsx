@@ -11,7 +11,7 @@ const AddProduct = () => {
     title: '',
     price: '',
     description: '',
-    category: 'smartphones',
+    category: 'Apparel',
   })
   const [imageFile, setImageFile] = useState(null)
 
@@ -41,7 +41,7 @@ const AddProduct = () => {
 
       if (res.data) {
         setAlert({ show: true, message: 'Product created successfully! It is now live in your catalog.', type: 'success' })
-        setFormData({ title: '', price: '', description: '', category: 'smartphones' })
+        setFormData({ title: '', price: '', description: '', category: 'Apparel' })
         setImageFile(null)
         // Reset file input manually
         document.getElementById('productImage').value = ''
@@ -94,23 +94,18 @@ const AddProduct = () => {
                     </div>
                   </div>
                   <div className="col-md-6">
-                    <label className="form-label fw-bold text-muted small text-uppercase">Category &amp; Subcategory</label>
+                    <label className="form-label fw-bold text-muted small text-uppercase">Category</label>
                     <select className="form-select form-select-lg" name="category" value={formData.category} onChange={handleChange} required>
-                      <option value="" disabled>Select category / subcategory</option>
-                      <optgroup label="Electronics">
-                        <option value="smartphones">Electronics — Smartphones</option>
-                        <option value="mobile-accessories">Electronics — Mobile Accessories</option>
-                      </optgroup>
-                      <optgroup label="Apparel">
-                        <option value="mens-shirts">Apparel — Men's Shirts</option>
-                        <option value="womens-dresses">Apparel — Women's Dresses</option>
-                        <option value="tops">Apparel — Tops &amp; Tees</option>
-                        <option value="shoes">Apparel — Shoes &amp; Footwear</option>
-                        <option value="watches">Apparel — Watches</option>
-                      </optgroup>
-                      <optgroup label="Computers">
-                        <option value="laptops">Computers — Laptops</option>
-                      </optgroup>
+                      <option value="" disabled>Select category</option>
+                      <option value="Apparel">Apparel</option>
+                      <option value="Electronics">Electronics</option>
+                      <option value="Computers">Computers</option>
+                      <option value="Accessories">Accessories</option>
+                      <option value="Home & Living">Home &amp; Living</option>
+                      <option value="Beauty & Cosmetics">Beauty &amp; Cosmetics</option>
+                      <option value="Sports & Outdoors">Sports &amp; Outdoors</option>
+                      <option value="General">General</option>
+                      <option value="Audio">Audio</option>
                     </select>
                   </div>
                 </div>

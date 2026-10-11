@@ -7,11 +7,13 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'First name is required'],
       trim: true,
+      match: [/^[A-Za-z]+$/, 'Names can only contain alphabetical letters!'],
     },
     lastname: {
       type: String,
       required: [true, 'Last name is required'],
       trim: true,
+      match: [/^[A-Za-z]+$/, 'Names can only contain alphabetical letters!'],
     },
     email: {
       type: String,
@@ -30,8 +32,15 @@ const userSchema = new mongoose.Schema(
       type: String,
       // Not required for Google OAuth users (they never set a password)
       required: false,
-      minlength: [6, 'Password must be at least 6 characters long'],
       select: false,
+      validate: {
+        validator: function (v) {
+          if (!v) return true;
+          if (v.startsWith('$2a$') || v.startsWith('$2b$')) return true;
+          return /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).{8,}$/.test(v);
+        },
+        message: 'Password must be at least 8 characters and include uppercase, lowercase, and a special character!',
+      },
     },
     role: {
       type: String,

@@ -23,6 +23,8 @@ const CATEGORIES = [
   { label: 'Home & Living',     emoji: '🏠' },
   { label: 'Beauty & Cosmetics',emoji: '💄' },
   { label: 'Sports & Outdoors', emoji: '⚽' },
+  { label: 'General',           emoji: '📦' },
+  { label: 'Audio',             emoji: '🎧' },
 ]
 
 const Navbar = () => {

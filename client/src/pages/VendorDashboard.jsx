@@ -692,7 +692,7 @@ const VendorDashboard = () => {
               <div className="col-md-6">
                 <label className="form-label" style={{ fontSize: '11px', fontWeight: 700,
                   textTransform: 'uppercase', letterSpacing: '.05em', color: '#64748B' }}>
-                  Category &amp; Subcategory *
+                  Category *
                 </label>
                 <select
                   name="category"
@@ -700,21 +700,16 @@ const VendorDashboard = () => {
                   {...productFormik.getFieldProps('category')}
                   required
                 >
-                  <option value="" disabled>Select category / subcategory</option>
-                  <optgroup label="Electronics">
-                    <option value="smartphones">Electronics — Smartphones</option>
-                    <option value="mobile-accessories">Electronics — Mobile Accessories</option>
-                  </optgroup>
-                  <optgroup label="Apparel">
-                    <option value="mens-shirts">Apparel — Men's Shirts</option>
-                    <option value="womens-dresses">Apparel — Women's Dresses</option>
-                    <option value="tops">Apparel — Tops</option>
-                    <option value="shoes">Apparel — Shoes</option>
-                    <option value="watches">Apparel — Watches</option>
-                  </optgroup>
-                  <optgroup label="Computers">
-                    <option value="laptops">Computers — Laptops</option>
-                  </optgroup>
+                  <option value="" disabled>Select category</option>
+                  <option value="Apparel">Apparel</option>
+                  <option value="Electronics">Electronics</option>
+                  <option value="Computers">Computers</option>
+                  <option value="Accessories">Accessories</option>
+                  <option value="Home & Living">Home &amp; Living</option>
+                  <option value="Beauty & Cosmetics">Beauty &amp; Cosmetics</option>
+                  <option value="Sports & Outdoors">Sports &amp; Outdoors</option>
+                  <option value="General">General</option>
+                  <option value="Audio">Audio</option>
                 </select>
                 <div className="invalid-feedback">{productFormik.errors.category}</div>
               </div>

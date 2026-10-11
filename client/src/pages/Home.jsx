@@ -8,18 +8,8 @@ import ProductCard from '../components/ProductCard'
 
 const DEFAULT_CATEGORIES = [
   'Apparel', 'Electronics', 'Computers',
-  'Accessories', 'Home & Living', 'Beauty & Cosmetics', 'Sports & Outdoors', 'General',
+  'Accessories', 'Home & Living', 'Beauty & Cosmetics', 'Sports & Outdoors', 'General', 'Audio',
 ]
-
-const SUBCATEGORIES_MAP = {
-  Apparel:             ['Clothing', 'Bags & Luggage', 'Shoes', 'Watches & Accessories'],
-  Electronics:         ['Headphones & Speakers', 'Smartphones & Tablets', 'Gadgets & Wearables'],
-  Computers:           ['Laptops', 'Desktops', 'Monitors & Displays', 'Peripherals'],
-  Accessories:         ['Jewelry', 'Sunglasses', 'Belts & Wallets'],
-  'Home & Living':     ['Kitchenware', 'Decor & Furniture', 'Lighting'],
-  'Beauty & Cosmetics':['Skincare', 'Makeup', 'Haircare', 'Fragrances & Perfumes', 'Nail Care'],
-  'Sports & Outdoors': ['Fitness & Gym', 'Outdoor Gear', 'Athletic Wear', 'Sports Equipment'],
-}
 
 // Category tile config — gradient background + Bootstrap Icon class
 const CAT_TILES = [
@@ -31,6 +21,7 @@ const CAT_TILES = [
   { label: 'Accessories',        icon: 'bi-gem',              bg: 'linear-gradient(135deg,#E9D5FF,#C084FC)' },
   { label: 'Sports & Outdoors',  icon: 'bi-trophy',           bg: 'linear-gradient(135deg,#FED7AA,#F97316)' },
   { label: 'General',            icon: 'bi-grid',             bg: 'linear-gradient(135deg,#BAE6FD,#7DD3FC)' },
+  { label: 'Audio',              icon: 'bi-headphones',       bg: 'linear-gradient(135deg,#DDD6FE,#8B5CF6)' },
 ]
 
 // Hero product carousel slides — image background slider
@@ -77,7 +68,6 @@ const Home = () => {
   const [loading, setLoading]           = useState(true)
   const [search, setSearch]             = useState('')
   const [userCategory, setUserCategory] = useState('')
-  const [selectedSubcat, setSelectedSubcat] = useState('')
   const [categories, setCategories]     = useState(DEFAULT_CATEGORIES)
   const [sort, setSort]                 = useState('')
   const [page, setPage]                 = useState(1)
@@ -94,7 +84,6 @@ const Home = () => {
   const handleCategoryChange = (newCat) => {
     setProducts([])
     setUserCategory(newCat)
-    setSelectedSubcat('')
     setSort('')
     setPage(1)
     if (newCat) setSearchParams({ category: newCat })
@@ -128,9 +117,11 @@ const Home = () => {
   const mapDummyProduct = (item) => {
     let cat = 'General'
     const c = (item.category || '').toLowerCase()
-    if (c.includes('shirt') || c.includes('dress') || c.includes('top') || c.includes('shoe') || c.includes('apparel') || c.includes('fashion') || c.includes('clot')) {
+    if (c.includes('audio') || c.includes('headphone') || c.includes('speaker')) {
+      cat = 'Audio'
+    } else if (c.includes('shirt') || c.includes('dress') || c.includes('top') || c.includes('shoe') || c.includes('apparel') || c.includes('fashion') || c.includes('clot')) {
       cat = 'Apparel'
-    } else if (c.includes('phone') || c.includes('tablet') || c.includes('electric') || c.includes('gadget') || c.includes('audio') || c.includes('headphone') || c.includes('speaker') || c.includes('mobile-accessories')) {
+    } else if (c.includes('phone') || c.includes('tablet') || c.includes('electric') || c.includes('gadget') || c.includes('mobile-accessories')) {
       cat = 'Electronics'
     } else if (c.includes('laptop') || c.includes('computer') || c.includes('desktop')) {
       cat = 'Computers'
@@ -186,7 +177,7 @@ const Home = () => {
         if (isNewest) {
           // New Arrivals mode: filter local products to match selection and showcase ONLY local MongoDB products sorted newest first
           const filteredLocal = activeCategory
-            ? localMongoDBProducts.filter(p => (p.category || '').toLowerCase() === activeCategory.toLowerCase())
+            ? localMongoDBProducts.filter(p => (p.category || '').toLowerCase() === activeCategory.toLowerCase() || (Array.isArray(p.categories) && p.categories.some(c => (c || '').toLowerCase() === activeCategory.toLowerCase())))
             : localMongoDBProducts
           combinedCatalog = [...filteredLocal].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
         } else {
@@ -217,7 +208,7 @@ const Home = () => {
           combinedCatalog = [...filteredLocalProducts, ...dummyJsonProducts]
 
           // Apply Search Filter
-          const activeSearch = selectedSubcat || search
+          const activeSearch = search
           if (activeSearch) {
             const sLower = activeSearch.toLowerCase()
             combinedCatalog = combinedCatalog.filter(p =>
@@ -250,31 +241,11 @@ const Home = () => {
       }
     }
     makeRequest()
-  }, [page, category, userCategory, sort, search, selectedSubcat, searchParams])
+  }, [page, category, userCategory, sort, search, searchParams])
 
   // Load categories
   useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await api.get('/products/categories/all')
-        const fetched = res.data.categories || res.data.data || []
-        setCategories([...new Set([...DEFAULT_CATEGORIES, ...fetched].filter(Boolean))])
-      } catch {
-        try {
-          const res = await api.get('/products', { params: { limit: 200 } })
-          const prods = res.data.products || res.data.data || []
-          const cats = [...new Set(
-            prods.flatMap(p =>
-              Array.isArray(p.categories) && p.categories.length > 0
-                ? p.categories
-                : p.category ? [p.category] : []
-            ).filter(Boolean)
-          )]
-          setCategories([...new Set([...DEFAULT_CATEGORIES, ...cats])])
-        } catch { /* silent */ }
-      }
-    }
-    load()
+    setCategories(DEFAULT_CATEGORIES)
   }, [])
 
   // Load cart
@@ -540,23 +511,6 @@ const Home = () => {
               </button>
             ))}
           </div>
-
-          {/* ── Subcategory row ── */}
-          {category && SUBCATEGORIES_MAP[category] && (
-            <div className="subcat-row">
-              <span className="subcat-label">In {category}:</span>
-              <button className={`subcat-pill ${!selectedSubcat ? 'active' : ''}`}
-                onClick={() => { setSelectedSubcat(''); setPage(1) }}>
-                All {category}
-              </button>
-              {SUBCATEGORIES_MAP[category].map(sub => (
-                <button key={sub} className={`subcat-pill ${selectedSubcat === sub ? 'active' : ''}`}
-                  onClick={() => { setSelectedSubcat(sub); setPage(1) }}>
-                  {sub}
-                </button>
-              ))}
-            </div>
-          )}
 
           {/* ── Product grid ── */}
           {loading ? (

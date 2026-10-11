@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const dns = require('dns');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -7,6 +8,30 @@ const User = require('../models/User');
 const VendorProfile = require('../models/VendorProfile');
 const OTPVerification = require('../models/OTPVerification');
 const sendEmail = require('../utils/emailService');
+
+/**
+ * Validate email domain via DNS MX lookup
+ */
+const validateEmailDomain = async (email) => {
+  if (!email || !email.includes('@')) return false;
+  const domain = email.split('@')[1]?.trim();
+  if (!domain) return false;
+
+  // Preserve test suite execution for mock test environments
+  if (process.env.NODE_ENV === 'test' && (domain === 'example.com' || domain === 'test.com' || domain === 'omnimart.com')) {
+    return true;
+  }
+
+  return new Promise((resolve) => {
+    dns.resolveMx(domain, (err, addresses) => {
+      if (err || !addresses || addresses.length === 0) {
+        resolve(false);
+      } else {
+        resolve(true);
+      }
+    });
+  });
+};
 
 /**
  * Generate JWT token signed with user ID & role (matching class specification)
@@ -53,6 +78,30 @@ const registerUser = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Validation failed: email and password are required.',
+      });
+    }
+
+    const nameRegex = /^[A-Za-z]+$/;
+    if (!nameRegex.test(firstname) || !nameRegex.test(lastname)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Names can only contain alphabetical letters!',
+      });
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 8 characters and include uppercase, lowercase, and a special character!',
+      });
+    }
+
+    const isDomainValid = await validateEmailDomain(email);
+    if (!isDomainValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Registration rejected: The email domain provided does not exist on the internet registry.',
       });
     }
 
@@ -307,6 +356,30 @@ const registerVendor = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Validation failed: email and password are required.',
+      });
+    }
+
+    const nameRegex = /^[A-Za-z]+$/;
+    if (!nameRegex.test(firstname) || !nameRegex.test(lastname)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Names can only contain alphabetical letters!',
+      });
+    }
+
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 8 characters and include uppercase, lowercase, and a special character!',
+      });
+    }
+
+    const isDomainValid = await validateEmailDomain(email);
+    if (!isDomainValid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Registration rejected: The email domain provided does not exist on the internet registry.',
       });
     }
 

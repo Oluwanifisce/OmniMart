@@ -12,7 +12,17 @@ const AddProduct = () => {
   const [status, setStatus] = useState({ type: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const categories = ['Apparel', 'Electronics', 'Computers', 'Audio', 'Accessories', 'Home & Living', 'Beauty & Cosmetics'];
+  const categories = [
+    'Apparel',
+    'Electronics',
+    'Computers',
+    'Accessories',
+    'Home & Living',
+    'Beauty & Cosmetics',
+    'Sports & Outdoors',
+    'General',
+    'Audio',
+  ];
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -109,7 +119,7 @@ const AddProduct = () => {
             </div>
 
             <div className="mb-3">
-              <label htmlFor="category" className="form-label fw-semibold">Category &amp; Subcategory</label>
+              <label htmlFor="category" className="form-label fw-semibold">Category</label>
               <select 
                 className="form-select" 
                 id="category" 
@@ -118,21 +128,10 @@ const AddProduct = () => {
                 onChange={handleInputChange}
                 required
               >
-                <option value="" disabled>Select category / subcategory</option>
-                <optgroup label="Electronics">
-                  <option value="smartphones">Electronics — Smartphones</option>
-                  <option value="mobile-accessories">Electronics — Mobile Accessories</option>
-                </optgroup>
-                <optgroup label="Apparel">
-                  <option value="mens-shirts">Apparel — Men's Shirts</option>
-                  <option value="womens-dresses">Apparel — Women's Dresses</option>
-                  <option value="tops">Apparel — Tops</option>
-                  <option value="shoes">Apparel — Shoes</option>
-                  <option value="watches">Apparel — Watches</option>
-                </optgroup>
-                <optgroup label="Computers">
-                  <option value="laptops">Computers — Laptops</option>
-                </optgroup>
+                <option value="" disabled>Select a category</option>
+                {categories.map((cat, idx) => (
+                  <option key={idx} value={cat}>{cat}</option>
+                ))}
               </select>
             </div>
 

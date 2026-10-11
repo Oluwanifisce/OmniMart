@@ -46,6 +46,20 @@ const productSchema = new mongoose.Schema(
       type: [String],
       required: true,
       default: ['General'],
+      enum: {
+        values: [
+          'Apparel',
+          'Electronics',
+          'Computers',
+          'Accessories',
+          'Home & Living',
+          'Beauty & Cosmetics',
+          'Sports & Outdoors',
+          'General',
+          'Audio',
+        ],
+        message: '{VALUE} is not a valid product category',
+      },
     },
     stock: {
       type: Number,
