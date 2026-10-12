@@ -34,6 +34,17 @@ if (!axios.__paystack_interceptor_attached) {
   });
 }
 
+// Diagnostic route
+router.get('/test-key', (req, res) => {
+  const key = getPaystackSecretKey();
+  return res.json({
+    status: 'ok',
+    prefix: key ? key.substring(0, 7) : null,
+    length: key ? key.length : 0,
+    commit: 'v2-diagnostic',
+  });
+});
+
 // Route 1: Initialize Paystack Payment (Using corrected process.env.PAYSTACK_SECRET_KEY)
 router.post('/initialize', async (req, res) => {
   try {
