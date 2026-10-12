@@ -29,12 +29,14 @@ router.post('/auth/google', googleAuth);
 // POST /api/v1/auth/verify-otp — Stage 2: verify OTP, create user, send welcome email
 router.post('/auth/verify-otp', verifyOTP);
 
-// POST /api/v1/auth/forgot-password — Send password reset OTP email
+// POST /forgot-password & /auth/forgot-password — Send password reset OTP email
+router.post('/forgot-password', forgotPassword);
 router.post('/auth/forgot-password', forgotPassword);
 
-// POST /api/v1/auth/reset-password — Verify reset code & update password
-router.post('/auth/reset-password', resetPassword);
+// POST /reset-password & /auth/reset-password — Verify reset code & update password
 router.post('/reset-password', resetPassword);
+router.post('/auth/reset-password', resetPassword);
+router.post('/verify-reset-code', resetPassword);
 router.post('/auth/verify-reset-code', resetPassword);
 
 // GET /api/v1/getusers
