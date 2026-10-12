@@ -35,30 +35,42 @@ router.get('/test-key', (req, res) => {
   });
 });
 
-// Route 1: Initialize Paystack Payment (Using corrected process.env.PAYSTACK_SECRET_KEY)
+// Route 1: Initialize Paystack Payment
 router.post('/initialize', async (req, res) => {
   try {
-    const { email, amount, cartItems = [], userId, callback_url } = req.body;
-    
+    const { email, amount, cartItems = [], userId: bodyUserId, callback_url } = req.body;
+
+    // Resolve user ID: JWT-authenticated token takes priority over body value
+    const mongoose = require('mongoose');
+    const resolveUserId = () => {
+      if (req.user?._id) return req.user._id;
+      if (bodyUserId && mongoose.Types.ObjectId.isValid(bodyUserId)) return bodyUserId;
+      return null;
+    };
+    const resolvedUserId = resolveUserId();
+
     // Paystack takes amounts in Kobo (Naira * 100)
-    const totalAmountKobo = Math.round(Number(amount) * 100); 
+    const totalAmountKobo = Math.round(Number(amount) * 100);
     const paystackReference = `OM-${crypto.randomBytes(8).toString('hex')}`;
 
     const secretKey = getPaystackSecretKey();
 
-    // Create a pending order in the database first
-    const newOrder = new Order({
-      user: userId,
+    // Build order - only set user field if we have a valid ObjectId
+    const orderData = {
       paystackReference,
       totalAmount: Number(amount),
       status: 'pending',
       items: cartItems.map(item => ({
-        product: item._id,
-        quantity: item.quantity,
-        price: item.price,
-        vendorId: item.vendorId || userId
-      }))
-    });
+        product: mongoose.Types.ObjectId.isValid(item._id) ? item._id : undefined,
+        quantity: item.quantity || 1,
+        price: item.price || 0,
+        vendorId: mongoose.Types.ObjectId.isValid(item.vendorId) ? item.vendorId
+          : (resolvedUserId || new mongoose.Types.ObjectId()),
+      })),
+    };
+    if (resolvedUserId) orderData.user = resolvedUserId;
+
+    const newOrder = new Order(orderData);
     await newOrder.save();
 
     const redirectUrl = callback_url || (req.headers.origin ? `${req.headers.origin}/checkout/success` : 'http://localhost:5173/checkout/success');

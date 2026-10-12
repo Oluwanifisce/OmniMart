@@ -5,14 +5,14 @@ const orderItemSchema = new mongoose.Schema({
   title: { type: String },
   quantity: { type: Number, required: true, min: 1 },
   price: { type: Number, required: true, min: 0 },
-  vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Crucial for routing data to separate vendor dashboards
+  vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'VendorProfile' },
   itemStatus: { type: String, default: 'pending' },
 }, { _id: true });
 
 const OrderSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     paystackReference: { type: String, required: true, unique: true, sparse: true },
     totalAmount: { type: Number, required: true }, // Total in Naira
