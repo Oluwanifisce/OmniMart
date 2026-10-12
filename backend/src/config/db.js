@@ -31,6 +31,9 @@ const connectDB = async () => {
     // Hard-purge legacy mock dev records (TechZone Electronics) from database
     await purgeLegacyMockData();
 
+    // Verify and self-heal master admin account
+    await seedMasterAdmin();
+
     return mongoose.connection;
   } catch (error) {
     console.error(`=======================================================`);
@@ -40,6 +43,43 @@ const connectDB = async () => {
     throw error;
   }
 };
+
+/**
+ * Self-healing hook to automatically seed our master admin account on database boot
+ */
+const seedMasterAdmin = async () => {
+  try {
+    const User = mongoose.models.User || require('../models/User');
+
+    // Check if the master admin email already exists in our database collection
+    const adminExists = await User.findOne({ email: 'admin@omnimart.com' });
+
+    if (!adminExists) {
+      console.log("Admin account missing. Initializing automatic master seed...");
+
+      // Create a brand-new master admin account profile record
+      const newAdmin = new User({
+        name: "System Administrator",
+        firstname: "System",
+        lastname: "Administrator",
+        email: "admin@omnimart.com",
+        password: "AdminPass123!", // Ensure your schema's pre-save hook handles hashing this password!
+        role: "admin",
+        isVerified: true,
+      });
+
+      await newAdmin.save();
+      console.log("Master Admin Account successfully seeded into MongoDB Atlas! 🚀");
+    } else {
+      console.log("Admin account verification check: Present and active.");
+    }
+  } catch (err) {
+    console.error("Critical Admin Seeder Exception Error:", err);
+  }
+};
+
+// Self-healing hook to automatically seed our master admin account on database boot
+mongoose.connection.once('open', seedMasterAdmin);
 
 /**
  * Hard-purges legacy dev mock records (TechZone Electronics) from MongoDB
