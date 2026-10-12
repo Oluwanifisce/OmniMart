@@ -1,76 +1,57 @@
 const mongoose = require('mongoose');
 
 const orderItemSchema = new mongoose.Schema({
-  product: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Product',
-    required: true,
-  },
-  vendor: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'VendorProfile',
-    required: true,
-  },
-  title: {
-    type: String,
-    required: true,
-  },
-  price: {
-    type: Number,
-    required: true,
-  },
-  quantity: {
-    type: Number,
-    required: true,
-    min: 1,
-  },
-  itemStatus: {
-    type: String,
-    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
-    default: 'pending',
-  },
-});
+  product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+  title: { type: String },
+  quantity: { type: Number, required: true, min: 1 },
+  price: { type: Number, required: true, min: 0 },
+  vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Crucial for routing data to separate vendor dashboards
+  vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'VendorProfile' },
+  itemStatus: { type: String, default: 'pending' },
+}, { _id: true });
 
-const orderSchema = new mongoose.Schema(
+const OrderSchema = new mongoose.Schema(
   {
-    customer: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-    items: [orderItemSchema],
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    paystackReference: { type: String, required: true, unique: true, sparse: true },
+    totalAmount: { type: Number, required: true }, // Total in Naira
+    status: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
+    orderStatus: { type: String, default: 'pending' },
     shippingAddress: {
-      street: { type: String, required: true },
-      city: { type: String, required: true },
+      street: { type: String, default: '' },
+      city: { type: String, default: '' },
       state: { type: String, default: '' },
       postalCode: { type: String, default: '100001' },
-      country: { type: String, required: true },
+      country: { type: String, default: 'Nigeria' },
+      phone: { type: String, default: '' },
     },
     paymentInfo: {
-      method: { type: String, default: 'Credit Card' },
-      status: { type: String, enum: ['pending', 'paid', 'failed'], default: 'paid' },
-      transactionId: { type: String, default: () => `TXN_${Date.now()}` },
+      method: { type: String, default: 'Paystack' },
+      status: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
+      transactionId: { type: String },
     },
-    orderStatus: {
-      type: String,
-      enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
-      default: 'pending',
-    },
-    totalAmount: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    commissionTotal: {
-      type: Number,
-      default: 0,
-    },
+    items: [orderItemSchema],
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-const Order = mongoose.model('Order', orderSchema);
+// Pre-save synchronization hook
+OrderSchema.pre('save', function (next) {
+  if (this.user && !this.customer) this.customer = this.user;
+  if (this.customer && !this.user) this.user = this.customer;
+  if (this.status && !this.orderStatus) this.orderStatus = this.status;
+  if (this.orderStatus === 'paid' && this.status !== 'paid') this.status = 'paid';
+  if (this.status === 'paid' && this.paymentInfo) this.paymentInfo.status = 'paid';
+  if (this.items && Array.isArray(this.items)) {
+    this.items.forEach(item => {
+      if (item.vendorId && !item.vendor) item.vendor = item.vendorId;
+      if (item.vendor && !item.vendorId) item.vendorId = item.vendor;
+    });
+  }
+  next();
+});
+
+const Order = mongoose.models.Order || mongoose.model('Order', OrderSchema);
 
 module.exports = Order;

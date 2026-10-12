@@ -1,5 +1,4 @@
-// Checkout.jsx — Amazon-style single-page distraction-free checkout flow
-// Formik + Yup inline field errors, 3 linear sections, right-side buy box
+// Checkout.jsx — Multi-Vendor Paystack Gateway Checkout Flow
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useFormik } from 'formik'
@@ -7,20 +6,27 @@ import * as yup from 'yup'
 import api from '../api/axios'
 import { useAuth } from '../context/AuthContext'
 
-const Checkout = () => {
-  const { user } = useAuth()
+export default function Checkout({ cart: propCart, user: propUser, totalAmount: propTotalAmount }) {
+  const { user: authUser } = useAuth()
+  const effectiveUser = propUser || authUser || JSON.parse(localStorage.getItem('user') || '{}')
 
-
-  const [cartItems, setCartItems]     = useState([])
-  const [loadingCart, setLoadingCart] = useState(true)
+  const [cartItems, setCartItems] = useState(propCart || [])
+  const [loadingCart, setLoadingCart] = useState(!propCart)
+  const [loading, setLoading] = useState(false)
   const [shippingOption, setShippingOption] = useState('standard') // standard | expedited
-  const [orderComplete, setOrderComplete]   = useState(null)
+  const [orderComplete, setOrderComplete] = useState(null)
 
   const formatPrice = (n) =>
     `₦${Number(n || 0).toLocaleString('en-NG')}`
 
-  // ── Load cart on mount ──
+  // ── Load cart on mount if not passed as prop ──
   useEffect(() => {
+    if (propCart && propCart.length > 0) {
+      setCartItems(propCart)
+      setLoadingCart(false)
+      return
+    }
+
     const fetchCart = async () => {
       try {
         setLoadingCart(true)
@@ -28,39 +34,132 @@ const Checkout = () => {
         const items = res.data.cart?.items || res.data.data?.items || []
         setCartItems(items)
       } catch (err) {
-        console.log(err)
+        console.warn('Error loading backend cart, reading local cart:', err.message)
+        const local = JSON.parse(localStorage.getItem('cartItems') || '[]')
+        setCartItems(local)
       } finally {
         setLoadingCart(false)
       }
     }
     fetchCart()
-  }, [])
+  }, [propCart])
 
   // ── Pricing calculations ──
-  const itemsSubtotal = cartItems.reduce(
-    (sum, i) => sum + (i.product?.price || i.price || 0) * i.quantity,
+  const effectiveCart = propCart || cartItems
+  const itemsSubtotal = effectiveCart.reduce(
+    (sum, i) => sum + (i.product?.price || i.price || 0) * (i.quantity || 1),
     0
   )
   const shippingFee = shippingOption === 'expedited' ? 2500 : 0
   const estimatedTax = itemsSubtotal * 0.075 // Standard 7.5% Nigerian VAT
-  const grandTotal   = itemsSubtotal + shippingFee + estimatedTax
+  const grandTotal = itemsSubtotal + shippingFee + estimatedTax
 
-  // ── Formik Checkout Form ──
+  const effectiveTotal = propTotalAmount !== undefined ? propTotalAmount : grandTotal
+
+  // ── Paystack Checkout Action (Core Requirement) ──
+  const handleCheckout = async (formAddress = null) => {
+    setLoading(true)
+    try {
+      const activeUser = effectiveUser
+      if (!activeUser || (!activeUser.email && !activeUser._id && !activeUser.id)) {
+        alert('Please sign in to proceed with secure Paystack checkout.')
+        setLoading(false)
+        return
+      }
+
+      // Format items ensuring _id, price, and vendorId are strictly provided
+      const formattedItems = (effectiveCart || []).map((item) => {
+        const prod = item.product || item
+        const resolvedVendorId =
+          item.vendorId ||
+          prod.vendorId ||
+          prod.vendor?._id ||
+          prod.vendor ||
+          prod.user ||
+          activeUser.id ||
+          activeUser._id
+
+        return {
+          _id: prod._id || item._id || item.productId,
+          price: Number(prod.price || item.price || 0),
+          quantity: Number(item.quantity || 1),
+          title: prod.title || prod.name || item.title || '',
+          vendorId: resolvedVendorId,
+        }
+      })
+
+      const payload = {
+        email: formAddress?.email || activeUser.email,
+        userId: activeUser.id || activeUser._id,
+        amount: effectiveTotal,
+        cartItems: formattedItems,
+        callback_url: `${window.location.origin}/checkout/success`,
+      }
+
+      let data
+      try {
+        const response = await fetch('/api/checkout/initialize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        data = await response.json()
+      } catch (fetchErr) {
+        // Fallback to axios endpoint
+        console.warn('Direct fetch error, trying API client:', fetchErr.message)
+        const res = await api.post('/checkout/initialize', payload)
+        data = res.data
+      }
+
+      if (data && data.authorization_url) {
+        // Safe redirect to Paystack payment gateway page
+        window.location.href = data.authorization_url
+      } else {
+        alert(data?.error || data?.message || 'Could not initialize transaction session.')
+        setLoading(false)
+      }
+    } catch (err) {
+      console.error('Checkout error:', err)
+      alert('Could not initialize transaction session. Please try again.')
+      setLoading(false)
+    }
+  }
+
+  // If component is mounted strictly with prop parameters, render standalone presentation wrapper
+  if (propCart && propUser && propTotalAmount !== undefined) {
+    return (
+      <div className="p-6 bg-white rounded shadow-md max-w-md mx-auto mt-10 text-center" style={{ maxWidth: '480px', margin: '40px auto', padding: '24px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+        <h2 className="text-xl font-bold mb-4" style={{ fontSize: '20px', fontWeight: 700, marginBottom: '16px', color: '#0F172A' }}>
+          Secure Gateway Checkout
+        </h2>
+        <p className="text-gray-600 mb-6" style={{ color: '#475569', marginBottom: '24px', fontSize: '15px' }}>
+          Total Payable: <b>₦{Number(propTotalAmount).toLocaleString('en-NG')}</b>
+        </p>
+        <button
+          onClick={() => handleCheckout()}
+          disabled={loading}
+          className="w-full py-3 bg-green-600 text-white font-semibold rounded hover:bg-green-700 disabled:opacity-50 transition-all btn btn-success"
+          style={{ width: '100%', padding: '12px', background: '#16a34a', color: '#fff', fontWeight: 600, borderRadius: '8px', border: 'none', cursor: 'pointer' }}
+        >
+          {loading ? 'Opening Secure Portal...' : 'Pay with Paystack'}
+        </button>
+      </div>
+    )
+  }
+
+  // ── Formik Checkout Form for Full Flow ──
   const formik = useFormik({
     enableReinitialize: true,
     initialValues: {
-      fullname: user ? `${user.firstname || ''} ${user.lastname || ''}`.trim() : '',
-      email: user?.email || '',
+      fullname: effectiveUser ? `${effectiveUser.firstname || ''} ${effectiveUser.lastname || ''}`.trim() : '',
+      email: effectiveUser?.email || '',
       phone: '',
       street: '',
       city: '',
       state: '',
       postalCode: '',
       country: 'Nigeria',
-      paymentMethod: 'card', // card | opay | cod
-      cardNumber: '',
-      cardExp: '',
-      cardCvc: '',
+      paymentMethod: 'paystack', // paystack | opay | cod
     },
     validationSchema: yup.object({
       fullname: yup.string().required('Please enter your full name'),
@@ -72,26 +171,20 @@ const Checkout = () => {
       postalCode: yup.string().optional(),
       country: yup.string().required('Country is required'),
       paymentMethod: yup.string().required(),
-      cardNumber: yup.string().when('paymentMethod', {
-        is: 'card',
-        then: (s) => s.required('Card number is required').matches(/^\d{13,19}$/, 'Card number must be 13-19 digits'),
-      }),
-      cardExp: yup.string().when('paymentMethod', {
-        is: 'card',
-        then: (s) => s.required('Expiry date is required').matches(/^(0[1-9]|1[0-2])\/?([0-9]{2})$/, 'Use MM/YY format'),
-      }),
-      cardCvc: yup.string().when('paymentMethod', {
-        is: 'card',
-        then: (s) => s.required('CVC is required').matches(/^\d{3,4}$/, '3 or 4 digits'),
-      }),
     }),
-    onSubmit: async (values, { setStatus, setSubmitting }) => {
-      try {
-        if (cartItems.length === 0) {
-          setStatus('Your shopping cart is empty.')
-          return
-        }
+    onSubmit: async (values) => {
+      if (effectiveCart.length === 0) {
+        formik.setStatus('Your shopping cart is empty.')
+        return
+      }
 
+      if (values.paymentMethod === 'paystack') {
+        await handleCheckout(values)
+        return
+      }
+
+      // Fallback for Cash on Delivery or OPay
+      try {
         const payload = {
           shippingAddress: {
             street: values.street,
@@ -101,7 +194,7 @@ const Checkout = () => {
             country: values.country,
             phone: values.phone,
           },
-          paymentMethod: values.paymentMethod === 'card' ? 'Credit Card' : values.paymentMethod === 'opay' ? 'OPay' : 'Cash on Delivery',
+          paymentMethod: values.paymentMethod === 'opay' ? 'OPay' : 'Cash on Delivery',
           shippingOption,
         }
 
@@ -115,119 +208,56 @@ const Checkout = () => {
           err.response?.data?.error ||
           err.response?.data?.message ||
           'Could not process order. Please try again.'
-        setStatus(errorMsg)
-      } finally {
-        setSubmitting(false)
+        formik.setStatus(errorMsg)
       }
     },
   })
 
-  // ── Render Order Confirmation Screen ──
+  // ── Order Confirmation View (For Non-Redirect Flow) ──
   if (orderComplete) {
     return (
-      <div style={{ minHeight: '100vh', background: '#F8F9FA', padding: '40px 16px' }}>
-        <div style={{ maxWidth: '640px', margin: '0 auto' }}>
-          <div className="card shadow-sm border-0 p-5 text-center bg-white" style={{ borderRadius: '8px' }}>
-            <div style={{ fontSize: '54px', color: '#10B981', marginBottom: '16px' }}>✅</div>
-            <h2 style={{ fontSize: '24px', fontWeight: 700, letterSpacing: '-.03em', color: '#0F172A' }}>
-              Order Placed, Thank You!
-            </h2>
-            <p className="text-muted mt-2" style={{ fontSize: '14px' }}>
-              We sent a confirmation email to <strong className="text-dark">{formik.values.email}</strong>.
-            </p>
-
-            <div className="p-3 my-4 text-start" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '6px' }}>
-              <div className="d-flex justify-content-between mb-2" style={{ fontSize: '13px' }}>
-                <span className="text-muted">Order ID:</span>
-                <strong style={{ fontFamily: 'monospace' }}>{orderComplete._id}</strong>
-              </div>
-              <div className="d-flex justify-content-between mb-2" style={{ fontSize: '13px' }}>
-                <span className="text-muted">Delivery Address:</span>
-                <span>{formik.values.street}, {formik.values.city}</span>
-              </div>
-              <div className="d-flex justify-content-between mb-0" style={{ fontSize: '13px' }}>
-                <span className="text-muted">Total Paid:</span>
-                <strong style={{ color: '#10B981' }}>{formatPrice(grandTotal)}</strong>
-              </div>
-            </div>
-
-            <div className="d-flex gap-3 justify-content-center mt-2">
-              <Link to="/" className="btn btn-primary px-4">
-                Continue Shopping
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ── Vendor Barrier Check ──
-  if (user && user.role === 'vendor') {
-    return (
-      <div style={{ minHeight: '100vh', background: '#F8F9FA', padding: '60px 16px' }}>
-        <div className="text-center p-5 bg-white shadow-sm" style={{ maxWidth: '480px', margin: '0 auto', borderRadius: '8px' }}>
-          <div style={{ fontSize: '48px' }}>🏪</div>
-          <h4 style={{ fontSize: '18px', fontWeight: 700, marginTop: '16px' }}>Shopping Restricted</h4>
-          <p className="text-muted" style={{ fontSize: '13px' }}>
-            Vendor profiles are restricted to store management only. Please create a separate Buyer/Customer account to purchase items!
+      <div className="container py-5 text-center" style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="card shadow-sm border-0 p-4 p-md-5 mx-auto" style={{ maxWidth: '500px', borderRadius: '12px' }}>
+          <div className="text-success mb-3" style={{ fontSize: '56px' }}>✓</div>
+          <h2 className="fw-bold mb-2">Order Confirmed!</h2>
+          <p className="text-muted mb-4" style={{ fontSize: '14px' }}>
+            Thank you for shopping on OmniMart. Your order has been placed with verified vendors.
           </p>
-          <Link to="/vendor" className="btn btn-dark mt-3 px-4">
-            Go to Vendor Dashboard
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
-  // ── Render Empty Cart State ──
-  if (!loadingCart && cartItems.length === 0) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#F8F9FA', padding: '60px 16px' }}>
-        <div className="text-center p-5 bg-white shadow-sm" style={{ maxWidth: '480px', margin: '0 auto', borderRadius: '8px' }}>
-          <div style={{ fontSize: '48px', opacity: 0.3 }}>🛒</div>
-          <h4 style={{ fontSize: '18px', fontWeight: 700, marginTop: '16px' }}>Your Cart is Empty</h4>
-          <p className="text-muted" style={{ fontSize: '13px' }}>Add items to your cart before proceeding to checkout.</p>
-          <Link to="/" className="btn btn-primary mt-3 px-4">
-            Browse Products
-          </Link>
+          <div className="d-flex gap-2 justify-content-center">
+            <Link to="/shop" className="btn btn-dark px-4 py-2">Continue Shopping</Link>
+            <Link to="/profile" className="btn btn-outline-secondary px-4 py-2">View Orders</Link>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#EAEDED', padding: '24px 16px 60px 16px' }}>
-      <div style={{ maxWidth: '1150px', margin: '0 auto' }}>
-
-        {/* Top distraction-free notice */}
-        <div className="d-flex align-items-center justify-content-between mb-4 pb-2 border-bottom">
-          <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#0F172A', letterSpacing: '-.03em' }}>
-            Checkout ({cartItems.length} {cartItems.length === 1 ? 'item' : 'items'})
-          </h1>
-          <Link to="/" style={{ fontSize: '13px', color: '#0F172A', textDecoration: 'none', fontWeight: 600 }}>
-            ‹ Back to Cart / Shop
+    <div style={{ background: '#F8FAFC', minHeight: '100vh', padding: '32px 0 64px' }}>
+      <div className="container" style={{ maxWidth: '1100px' }}>
+        {/* Navigation Breadcrumb */}
+        <div className="mb-4">
+          <Link to="/shop" style={{ textDecoration: 'none', color: '#64748B', fontSize: '13px', fontWeight: 600 }}>
+            ← Return to Marketplace
           </Link>
         </div>
 
-        {formik.status && (
-          <div className="alert alert-danger shadow-sm mb-4" style={{ borderRadius: '6px' }}>
-            {formik.status}
-          </div>
-        )}
-
-        <form onSubmit={formik.handleSubmit}>
-          <div className="row g-4">
-
-            {/* ── Left Column: 3 Sequential Linear Checkout Sections ── */}
-            <div className="col-lg-8">
+        <div className="row g-4">
+          {/* ── Left Column: Linear Checkout Steps ── */}
+          <div className="col-lg-8">
+            <form onSubmit={formik.handleSubmit}>
+              {formik.status && (
+                <div className="alert alert-danger py-2.5 px-3 mb-4 rounded-3" style={{ fontSize: '13px' }}>
+                  {formik.status}
+                </div>
+              )}
 
               {/* SECTION 1: SHIPPING ADDRESS */}
-              <div className="card shadow-sm border-0 mb-4 bg-white" style={{ borderRadius: '8px' }}>
+              <div className="card shadow-sm border-0 mb-4 bg-white" style={{ borderRadius: '12px' }}>
                 <div className="card-body p-4">
                   <div className="d-flex align-items-center gap-3 mb-3">
                     <span className="badge rounded-circle bg-dark" style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>1</span>
-                    <h5 className="mb-0 fw-bold" style={{ fontSize: '16px' }}>Shipping Address</h5>
+                    <h5 className="mb-0 fw-bold" style={{ fontSize: '16px' }}>Delivery Address</h5>
                   </div>
 
                   <div className="row g-3">
@@ -322,9 +352,6 @@ const Checkout = () => {
                         onBlur={formik.handleBlur}
                         className={`form-control ${formik.touched.postalCode && formik.errors.postalCode ? 'is-invalid' : ''}`}
                       />
-                      {formik.touched.postalCode && formik.errors.postalCode && (
-                        <div className="invalid-feedback">{formik.errors.postalCode}</div>
-                      )}
                     </div>
 
                     <div className="col-md-6">
@@ -335,11 +362,8 @@ const Checkout = () => {
                         value={formik.values.country}
                         onChange={formik.handleChange}
                         onBlur={formik.handleBlur}
-                        className={`form-control ${formik.touched.country && formik.errors.country ? 'is-invalid' : ''}`}
+                        className="form-control"
                       />
-                      {formik.touched.country && formik.errors.country && (
-                        <div className="invalid-feedback">{formik.errors.country}</div>
-                      )}
                     </div>
 
                     <div className="col-md-6">
@@ -361,8 +385,8 @@ const Checkout = () => {
                 </div>
               </div>
 
-              {/* SECTION 2: PAYMENT METHOD */}
-              <div className="card shadow-sm border-0 mb-4 bg-white" style={{ borderRadius: '8px' }}>
+              {/* SECTION 2: PAYMENT METHOD (PAYSTACK MULTI-VENDOR CORE) */}
+              <div className="card shadow-sm border-0 mb-4 bg-white" style={{ borderRadius: '12px' }}>
                 <div className="card-body p-4">
                   <div className="d-flex align-items-center gap-3 mb-3">
                     <span className="badge rounded-circle bg-dark" style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>2</span>
@@ -371,17 +395,31 @@ const Checkout = () => {
 
                   <div className="d-flex flex-column gap-2 mb-3">
                     {[
-                      { id: 'card', label: '💳 Credit or Debit Card', badge: null },
-                      { id: 'opay', label: 'Pay with OPay (Bank Transfer / Wallet)', badge: 'OPay' },
-                      { id: 'cod', label: '💵 Cash on Delivery', badge: null },
+                      {
+                        id: 'paystack',
+                        label: 'Pay with Paystack (Debit/Credit Card, Bank Transfer, USSD)',
+                        badge: 'PAYSTACK TEST MODE',
+                        badgeColor: '#00C26D',
+                      },
+                      {
+                        id: 'opay',
+                        label: 'Pay with OPay (Bank Transfer / Wallet)',
+                        badge: 'OPay',
+                        badgeColor: '#00C26D',
+                      },
+                      {
+                        id: 'cod',
+                        label: '💵 Cash on Delivery',
+                        badge: null,
+                      },
                     ].map((opt) => (
                       <label
                         key={opt.id}
                         className="d-flex align-items-center gap-3 p-3 border rounded"
                         style={{
                           cursor: 'pointer',
-                          background: formik.values.paymentMethod === opt.id ? (opt.id === 'opay' ? '#F0FDF4' : '#F8FAFC') : '#fff',
-                          borderColor: formik.values.paymentMethod === opt.id ? (opt.id === 'opay' ? '#00C26D' : '#0F172A') : '#E2E8F0',
+                          background: formik.values.paymentMethod === opt.id ? '#F0FDF4' : '#fff',
+                          borderColor: formik.values.paymentMethod === opt.id ? '#00C26D' : '#E2E8F0',
                           transition: 'all 0.2s ease',
                         }}
                       >
@@ -396,14 +434,13 @@ const Checkout = () => {
                           {opt.badge && (
                             <span
                               style={{
-                                background: '#00C26D',
+                                background: opt.badgeColor,
                                 color: '#ffffff',
                                 fontWeight: 800,
                                 fontSize: '11px',
                                 padding: '2px 8px',
                                 borderRadius: '4px',
                                 letterSpacing: '0.05em',
-                                boxShadow: '0 1px 2px rgba(0, 194, 109, 0.2)',
                               }}
                             >
                               {opt.badge}
@@ -415,148 +452,45 @@ const Checkout = () => {
                     ))}
                   </div>
 
-                  {/* OPay Payment Option Layout */}
-                  {formik.values.paymentMethod === 'opay' && (
-                    <div
-                      className="p-3 rounded border mb-3"
-                      style={{
-                        background: '#F0FDF4',
-                        borderColor: '#86EFAC',
-                        borderLeft: '4px solid #00C26D',
-                      }}
-                    >
+                  {/* Paystack Interactive Panel */}
+                  {formik.values.paymentMethod === 'paystack' && (
+                    <div className="p-3 rounded border mb-3 text-start" style={{ background: '#F0FDF4', borderColor: '#86EFAC', borderLeft: '4px solid #00C26D' }}>
                       <div className="d-flex align-items-center justify-content-between mb-2">
                         <div className="d-flex align-items-center gap-2">
-                          <span
-                            style={{
-                              background: '#00C26D',
-                              color: '#fff',
-                              fontWeight: 900,
-                              fontSize: '12px',
-                              padding: '2px 8px',
-                              borderRadius: '4px',
-                              letterSpacing: '0.08em',
-                            }}
-                          >
-                            OPay
+                          <span style={{ background: '#00C26D', color: '#fff', fontWeight: 900, fontSize: '12px', padding: '2px 8px', borderRadius: '4px' }}>
+                            PAYSTACK
                           </span>
                           <span style={{ fontSize: '13px', fontWeight: 700, color: '#065F46' }}>
-                            Fast & Secure Nigerian Checkout
+                            Official Multi-Vendor Payment Gateway
                           </span>
                         </div>
-                        <span
-                          style={{
-                            background: '#DCFCE7',
-                            color: '#15803D',
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            padding: '3px 8px',
-                            borderRadius: '12px',
-                            border: '1px solid #86EFAC',
-                          }}
-                        >
-                          ⚡ Instant Confirmation
-                        </span>
+                        <span className="badge bg-success" style={{ fontSize: '11px' }}>Active</span>
                       </div>
                       <p style={{ fontSize: '13px', color: '#166534', marginBottom: '12px', lineHeight: 1.5 }}>
-                        Pay effortlessly using your <strong>OPay Wallet</strong> or make an instant <strong>Bank Transfer</strong> directly to our secure OmniMart merchant account. Zero transaction delays.
+                        Clicking <strong>&ldquo;Pay with Paystack&rdquo;</strong> will redirect you to Paystack&apos;s PCI-DSS certified gateway. Once paid, vendor balances and order metrics update instantly.
                       </p>
-                      <div className="p-2.5 rounded bg-white border d-flex align-items-center justify-content-between" style={{ borderColor: '#BBF7D0' }}>
-                        <div className="d-flex align-items-center gap-2">
-                          <span style={{ fontSize: '18px' }}>🏦</span>
-                          <div>
-                            <div style={{ fontSize: '12px', fontWeight: 700, color: '#0F172A' }}>
-                              OPay Direct Wallet & Bank Transfer
-                            </div>
-                            <div style={{ fontSize: '11px', color: '#64748B' }}>
-                              Instant auto-reconciliation with zero gateway fees
-                            </div>
-                          </div>
-                        </div>
-                        <span
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            color: '#00C26D',
-                            background: '#F0FDF4',
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            border: '1px solid #86EFAC',
-                          }}
-                        >
-                          Active
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Card input fields */}
-                  {formik.values.paymentMethod === 'card' && (
-                    <div className="p-3 bg-light rounded border">
-                      <div className="row g-3">
-                        <div className="col-12">
-                          <label className="form-label" style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#64748B' }}>Card Number *</label>
-                          <input
-                            type="text"
-                            name="cardNumber"
-                            placeholder="4532 0000 0000 0000"
-                            value={formik.values.cardNumber}
-                            onChange={formik.handleChange}
-                            onBlur={formik.handleBlur}
-                            className={`form-control ${formik.touched.cardNumber && formik.errors.cardNumber ? 'is-invalid' : ''}`}
-                          />
-                          {formik.touched.cardNumber && formik.errors.cardNumber && (
-                            <div className="invalid-feedback">{formik.errors.cardNumber}</div>
-                          )}
-                        </div>
-
-                        <div className="col-6">
-                          <label className="form-label" style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#64748B' }}>Expiration (MM/YY) *</label>
-                          <input
-                            type="text"
-                            name="cardExp"
-                            placeholder="12/28"
-                            value={formik.values.cardExp}
-                            onChange={formik.handleChange}
-                            onBlur={formik.handleBlur}
-                            className={`form-control ${formik.touched.cardExp && formik.errors.cardExp ? 'is-invalid' : ''}`}
-                          />
-                          {formik.touched.cardExp && formik.errors.cardExp && (
-                            <div className="invalid-feedback">{formik.errors.cardExp}</div>
-                          )}
-                        </div>
-
-                        <div className="col-6">
-                          <label className="form-label" style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#64748B' }}>CVC / CVV *</label>
-                          <input
-                            type="password"
-                            name="cardCvc"
-                            placeholder="123"
-                            maxLength={4}
-                            value={formik.values.cardCvc}
-                            onChange={formik.handleChange}
-                            onBlur={formik.handleBlur}
-                            className={`form-control ${formik.touched.cardCvc && formik.errors.cardCvc ? 'is-invalid' : ''}`}
-                          />
-                          {formik.touched.cardCvc && formik.errors.cardCvc && (
-                            <div className="invalid-feedback">{formik.errors.cardCvc}</div>
-                          )}
-                        </div>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCheckout(formik.values)}
+                        disabled={loading || effectiveTotal <= 0}
+                        className="btn btn-success w-100 py-2.5 fw-bold text-white shadow-sm"
+                        style={{ background: '#00C26D', borderColor: '#00C26D', borderRadius: '8px' }}
+                      >
+                        {loading ? 'Opening Secure Portal...' : `Pay ₦${effectiveTotal.toLocaleString('en-NG')} with Paystack`}
+                      </button>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* SECTION 3: REVIEW ITEMS & DELIVERY SPEED */}
-              <div className="card shadow-sm border-0 mb-4 bg-white" style={{ borderRadius: '8px' }}>
+              {/* SECTION 3: ORDER ITEMS & DELIVERY SPEED */}
+              <div className="card shadow-sm border-0 mb-4 bg-white" style={{ borderRadius: '12px' }}>
                 <div className="card-body p-4">
                   <div className="d-flex align-items-center gap-3 mb-3">
                     <span className="badge rounded-circle bg-dark" style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>3</span>
                     <h5 className="mb-0 fw-bold" style={{ fontSize: '16px' }}>Review Items & Delivery Speed</h5>
                   </div>
 
-                  {/* Delivery Speed Selection */}
                   <div className="p-3 mb-4 rounded border" style={{ background: '#F8FAFC' }}>
                     <div className="fw-semibold mb-2" style={{ fontSize: '13px' }}>Choose a delivery option:</div>
                     <div className="d-flex flex-column gap-2">
@@ -570,8 +504,8 @@ const Checkout = () => {
                             onChange={() => setShippingOption('standard')}
                           />
                           <div>
-                            <div style={{ fontSize: '13px', fontWeight: 600 }}>FREE Standard Shipping (3-5 Business Days)</div>
-                            <div style={{ fontSize: '11px', color: '#64748B' }}>Delivered by UPS or FedEx</div>
+                            <div style={{ fontSize: '13px', fontWeight: 600 }}>Standard Delivery (3-5 Days)</div>
+                            <div style={{ fontSize: '11px', color: '#64748B' }}>Direct vendor dispatch</div>
                           </div>
                         </div>
                         <strong style={{ color: '#10B981', fontSize: '13px' }}>FREE</strong>
@@ -587,8 +521,8 @@ const Checkout = () => {
                             onChange={() => setShippingOption('expedited')}
                           />
                           <div>
-                            <div style={{ fontSize: '13px', fontWeight: 600 }}>⚡ Expedited Priority Delivery (1-2 Days)</div>
-                            <div style={{ fontSize: '11px', color: '#64748B' }}>Priority dispatch with signature required</div>
+                            <div style={{ fontSize: '13px', fontWeight: 600 }}>⚡ Expedited Priority (1-2 Days)</div>
+                            <div style={{ fontSize: '11px', color: '#64748B' }}>Priority courier handling</div>
                           </div>
                         </div>
                         <strong style={{ fontSize: '13px' }}>₦2,500</strong>
@@ -596,30 +530,27 @@ const Checkout = () => {
                     </div>
                   </div>
 
-                  {/* Order Items List */}
+                  {/* Items List */}
                   <div className="d-flex flex-column gap-3">
-                    {cartItems.map((item, idx) => {
+                    {effectiveCart.map((item, idx) => {
                       const prod = item.product || item
                       return (
                         <div key={idx} className="d-flex gap-3 align-items-center pb-3 border-bottom">
                           {prod.images?.[0] ? (
                             <img src={prod.images[0]} alt={prod.title || prod.name} style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: '6px', border: '1px solid #E2E8F0' }} />
                           ) : (
-                            <div style={{ width: 56, height: 56, background: '#F8F9FA', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📦</div>
+                            <div style={{ width: 56, height: 56, background: '#F8FAFC', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📦</div>
                           )}
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#0F172A' }}>
-                              {prod.title || prod.name}
+                              {prod.title || prod.name || 'Product Item'}
                             </div>
                             <div style={{ fontSize: '12px', color: '#64748B' }}>
-                              Seller: {prod.vendor?.storeName || 'OmniMart Seller'}
-                            </div>
-                            <div style={{ fontSize: '12px', color: '#64748B' }}>
-                              Qty: {item.quantity}
+                              Qty: {item.quantity || 1}
                             </div>
                           </div>
                           <div style={{ fontSize: '15px', fontWeight: 700, color: '#10B981' }}>
-                            {formatPrice((prod.price || 0) * item.quantity)}
+                            {formatPrice((prod.price || item.price || 0) * (item.quantity || 1))}
                           </div>
                         </div>
                       )
@@ -627,66 +558,55 @@ const Checkout = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            </form>
+          </div>
 
-            {/* ── Right Column: Amazon-Style Sticky Order Summary Buy Box ── */}
-            <div className="col-lg-4">
-              <div className="card shadow-sm border-0 bg-white sticky-top" style={{ top: '80px', borderRadius: '8px' }}>
-                <div className="card-body p-4">
+          {/* ── Right Column: Order Summary Buy Box ── */}
+          <div className="col-lg-4">
+            <div className="card shadow-sm border-0 bg-white sticky-top" style={{ top: '80px', borderRadius: '12px' }}>
+              <div className="card-body p-4">
+                <h5 className="fw-bold mb-3" style={{ fontSize: '16px' }}>Order Summary</h5>
 
-                  {/* Prominent Place Order CTA Button */}
-                  <button
-                    type="submit"
-                    className="btn btn-warning w-100 py-3 fw-bold shadow-sm"
-                    style={{ background: '#FFD814', borderColor: '#FCD200', color: '#0F172A', fontSize: '15px', borderRadius: '8px' }}
-                    disabled={formik.isSubmitting}
-                  >
-                    {formik.isSubmitting ? 'Processing Order…' : 'Place your order'}
-                  </button>
-
-                  <p className="text-muted text-center mt-2" style={{ fontSize: '11px', lineHeight: 1.3 }}>
-                    By placing your order, you agree to OmniMart&apos;s privacy notice and conditions of use.
-                  </p>
-
-                  <hr className="my-3" />
-
-                  <h6 className="fw-bold mb-3" style={{ fontSize: '14px' }}>Order Summary</h6>
-
-                  <div className="d-flex justify-content-between mb-2" style={{ fontSize: '13px' }}>
-                    <span className="text-muted">Items ({cartItems.length}):</span>
-                    <span>{formatPrice(itemsSubtotal)}</span>
-                  </div>
-
-                  <div className="d-flex justify-content-between mb-2" style={{ fontSize: '13px' }}>
-                    <span className="text-muted">Shipping & handling:</span>
-                    <span>{shippingFee === 0 ? 'FREE' : formatPrice(shippingFee)}</span>
-                  </div>
-
-                  <div className="d-flex justify-content-between mb-2" style={{ fontSize: '13px' }}>
-                    <span className="text-muted">Estimated Tax (8%):</span>
-                    <span>{formatPrice(estimatedTax)}</span>
-                  </div>
-
-                  <hr className="my-2" />
-
-                  <div className="d-flex justify-content-between align-items-center mt-3 pt-2" style={{ borderTop: '2px solid #0F172A' }}>
-                    <span style={{ fontSize: '16px', fontWeight: 700, color: '#B12704' }}>Order Total:</span>
-                    <span style={{ fontSize: '18px', fontWeight: 800, color: '#B12704' }}>{formatPrice(grandTotal)}</span>
-                  </div>
-
-                  {/* Security Badge */}
-                  <div className="mt-4 p-3 rounded text-center" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: '11px', color: '#64748B' }}>
-                    🔒 256-Bit SSL Encrypted Checkout
-                  </div>
+                <div className="d-flex justify-content-between mb-2" style={{ fontSize: '13px' }}>
+                  <span className="text-muted">Items Subtotal:</span>
+                  <span>{formatPrice(itemsSubtotal)}</span>
                 </div>
+                <div className="d-flex justify-content-between mb-2" style={{ fontSize: '13px' }}>
+                  <span className="text-muted">Shipping:</span>
+                  <span>{shippingFee === 0 ? <strong className="text-success">FREE</strong> : formatPrice(shippingFee)}</span>
+                </div>
+                <div className="d-flex justify-content-between mb-3" style={{ fontSize: '13px' }}>
+                  <span className="text-muted">Estimated VAT (7.5%):</span>
+                  <span>{formatPrice(estimatedTax)}</span>
+                </div>
+
+                <hr className="my-3" />
+
+                <div className="d-flex justify-content-between mb-4">
+                  <span className="fw-bold" style={{ fontSize: '16px' }}>Total Payable:</span>
+                  <span className="fw-bold text-success" style={{ fontSize: '18px' }}>
+                    {formatPrice(effectiveTotal)}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleCheckout(formik.values)}
+                  disabled={loading || effectiveTotal <= 0}
+                  className="btn btn-success w-full py-3 fw-bold rounded-3 shadow-sm text-white"
+                  style={{ width: '100%', background: '#00C26D', borderColor: '#00C26D', fontSize: '15px' }}
+                >
+                  {loading ? 'Opening Secure Portal...' : 'Pay with Paystack'}
+                </button>
+
+                <p className="text-muted text-center mt-3 mb-0" style={{ fontSize: '11px', lineHeight: 1.4 }}>
+                  🔒 Secure Paystack Multi-Vendor Gateway · Verified Settlements
+                </p>
               </div>
             </div>
-
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )
 }
-
-export default Checkout

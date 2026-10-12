@@ -10,6 +10,7 @@ import Login           from './pages/Login'
 import Register        from './pages/Register'
 import ForgotPassword  from './pages/ForgotPassword'
 import Checkout        from './pages/Checkout'
+import CheckoutSuccess from './pages/CheckoutSuccess'
 import VendorDashboard from './pages/VendorDashboard'
 import AdminDashboard  from './pages/AdminDashboard'
 import ProfilePage     from './pages/ProfilePage'
@@ -34,6 +35,7 @@ const App = () => {
           <Route path="/signup"          element={<Register />} />
           <Route path="/register"        element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/checkout/success" element={<CheckoutSuccess />} />
 
           {/* Protected checkout */}
           <Route path="/checkout" element={

@@ -13,6 +13,8 @@ const cartRoutes = require('./routes/cart.routes');
 const orderRoutes = require('./routes/order.routes');
 const reviewRoutes = require('./routes/review.routes');
 const uploadRoutes = require('./routes/upload.routes');
+const checkoutRoutes = require('./routes/checkout');
+const dashboardsRoutes = require('./routes/dashboards');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -82,6 +84,8 @@ app.use('/api/v1/cart', cartRoutes);
 app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1', reviewRoutes);
 app.use('/api/v1/upload', uploadRoutes);
+app.use('/api/v1/checkout', checkoutRoutes);
+app.use('/api/v1/dashboards', dashboardsRoutes);
 
 // Compatibility Mounts (/api)
 app.use('/api/auth', authRoutes);
@@ -92,6 +96,12 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api', reviewRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/checkout', checkoutRoutes);
+app.use('/api/dashboards', dashboardsRoutes);
+app.use('/checkout', checkoutRoutes);
+app.use('/dashboards', dashboardsRoutes);
+app.use('/api', dashboardsRoutes);
+app.use('/api/v1', dashboardsRoutes);
 
 // Catch 404 for unknown endpoints
 app.use((req, res) => {
