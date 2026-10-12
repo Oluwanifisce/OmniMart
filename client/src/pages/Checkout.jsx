@@ -97,36 +97,32 @@ export default function Checkout({ cart: propCart, user: propUser, totalAmount: 
       }
 
       let data = null
-      try {
-        // Prioritize configured API client with full baseURL & credential headers
-        const res = await api.post('/checkout/initialize', payload)
-        data = res.data
-      } catch (apiErr) {
-        console.warn('API client post error, trying direct fetch:', apiErr.response?.data || apiErr.message)
+
+      // Three-tier fallback: API client → Vite proxy fetch → absolute production URL
+      const PROD_API = 'https://omni-mart-f6k9.vercel.app/api/v1'
+      const endpoints = [
+        () => api.post('/checkout/initialize', payload).then(r => r.data),
+        () => fetch('/api/checkout/initialize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(async r => { if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || e.message || `HTTP ${r.status}`) } return r.json() }),
+        () => fetch(`${PROD_API}/checkout/initialize`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(async r => { if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || e.message || `HTTP ${r.status}`) } return r.json() }),
+      ]
+
+      let lastErr = null
+      for (const attempt of endpoints) {
         try {
-          const response = await fetch('/api/checkout/initialize', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          })
-          if (response.ok) {
-            data = await response.json()
-          } else {
-            const errData = await response.json().catch(() => null)
-            throw new Error(errData?.error || errData?.message || apiErr.response?.data?.error || apiErr.response?.data?.message || apiErr.message)
-          }
-        } catch (fetchErr) {
-          throw new Error(apiErr.response?.data?.error || apiErr.response?.data?.message || fetchErr.message || 'Payment initialization failed')
+          data = await attempt()
+          if (data && data.authorization_url) break
+        } catch (e) {
+          console.warn('Checkout attempt failed, trying next fallback:', e.message)
+          lastErr = e
         }
       }
 
-      if (data && data.authorization_url) {
-        // Safe redirect to Paystack payment gateway page
-        window.location.href = data.authorization_url
-      } else {
-        alert(data?.error || data?.message || 'Could not initialize transaction session.')
-        setLoading(false)
+      if (!data || !data.authorization_url) {
+        throw new Error(lastErr?.message || data?.error || data?.message || 'Could not initialize Paystack session.')
       }
+
+      // Redirect to Paystack hosted payment page
+      window.location.href = data.authorization_url
     } catch (err) {
       console.error('Checkout error:', err)
       alert(err.message || 'Could not initialize transaction session. Please try again.')
@@ -134,27 +130,6 @@ export default function Checkout({ cart: propCart, user: propUser, totalAmount: 
     }
   }
 
-  // If component is mounted strictly with prop parameters, render standalone presentation wrapper
-  if (propCart && propUser && propTotalAmount !== undefined) {
-    return (
-      <div className="p-6 bg-white rounded shadow-md max-w-md mx-auto mt-10 text-center" style={{ maxWidth: '480px', margin: '40px auto', padding: '24px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
-        <h2 className="text-xl font-bold mb-4" style={{ fontSize: '20px', fontWeight: 700, marginBottom: '16px', color: '#0F172A' }}>
-          Secure Gateway Checkout
-        </h2>
-        <p className="text-gray-600 mb-6" style={{ color: '#475569', marginBottom: '24px', fontSize: '15px' }}>
-          Total Payable: <b>₦{Number(propTotalAmount).toLocaleString('en-NG')}</b>
-        </p>
-        <button
-          onClick={() => handleCheckout()}
-          disabled={loading}
-          className="w-full py-3 bg-green-600 text-white font-semibold rounded hover:bg-green-700 disabled:opacity-50 transition-all btn btn-success"
-          style={{ width: '100%', padding: '12px', background: '#16a34a', color: '#fff', fontWeight: 600, borderRadius: '8px', border: 'none', cursor: 'pointer' }}
-        >
-          {loading ? 'Opening Secure Portal...' : 'Pay with Paystack'}
-        </button>
-      </div>
-    )
-  }
 
   // ── Formik Checkout Form for Full Flow ──
   const formik = useFormik({

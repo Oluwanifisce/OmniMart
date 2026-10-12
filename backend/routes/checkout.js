@@ -23,16 +23,6 @@ const getPaystackSecretKey = () => {
   return 'sk_test_38abb048c750e77ab8f0f09951ac8506a4770247';
 };
 
-// Ensure Paystack API calls resolve to official transaction initialize endpoint
-if (!axios.__paystack_interceptor_attached) {
-  axios.__paystack_interceptor_attached = true;
-  axios.interceptors.request.use((config) => {
-    if (config.url === 'https://paystack.co' || config.url === 'https://paystack.co/') {
-      config.url = 'https://api.paystack.co/transaction/initialize';
-    }
-    return config;
-  });
-}
 
 // Diagnostic route
 router.get('/test-key', (req, res) => {
@@ -73,9 +63,9 @@ router.post('/initialize', async (req, res) => {
 
     const redirectUrl = callback_url || (req.headers.origin ? `${req.headers.origin}/checkout/success` : 'http://localhost:5173/checkout/success');
 
-    // Call official Paystack API Endpoint with the correct Secret Key
+    // Call official Paystack transaction initialize endpoint
     const response = await axios.post(
-      'https://paystack.co',
+      'https://api.paystack.co/transaction/initialize',
       {
         email,
         amount: totalAmountKobo,
