@@ -5,14 +5,22 @@ const crypto = require('crypto');
 const Order = require('../models/Order');
 
 // Fallback to preserve active Paystack test secret key across serverless hosting environments
+// Safely validates that the key begins with 'sk_' (avoiding public key or placeholder collisions)
 const getPaystackSecretKey = () => {
-  return (
-    process.env.PAYSTACK_SECRET_KEY ||
-    process.env.Test_Secret_Key ||
-    process.env.PAYSTACK_SECRET_KEY_Secret_Key ||
-    process.env.PAYSTACK_SECRET ||
-    'sk_test_38abb048c750e77ab8f0f09951ac8506a4770247'
-  );
+  const candidates = [
+    process.env.PAYSTACK_SECRET_KEY,
+    process.env.Test_Secret_Key,
+    process.env.PAYSTACK_SECRET_KEY_Secret_Key,
+    process.env.PAYSTACK_SECRET,
+  ];
+
+  for (const key of candidates) {
+    if (typeof key === 'string' && key.trim().startsWith('sk_')) {
+      return key.trim();
+    }
+  }
+
+  return 'sk_test_38abb048c750e77ab8f0f09951ac8506a4770247';
 };
 
 // Ensure Paystack API calls resolve to official transaction initialize endpoint
