@@ -8,6 +8,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Home            from './pages/Home'
 import Login           from './pages/Login'
 import Register        from './pages/Register'
+import ForgotPassword  from './pages/ForgotPassword'
 import Checkout        from './pages/Checkout'
 import VendorDashboard from './pages/VendorDashboard'
 import AdminDashboard  from './pages/AdminDashboard'
@@ -27,11 +28,12 @@ const App = () => {
       <main style={{ flex: 1 }}>
         <Routes>
           {/* Public routes */}
-          <Route path="/"         element={<Home />} />
-          <Route path="/shop"     element={<Home />} />
-          <Route path="/login"    element={<Login />} />
-          <Route path="/signup"   element={<Register />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/"                element={<Home />} />
+          <Route path="/shop"            element={<Home />} />
+          <Route path="/login"           element={<Login />} />
+          <Route path="/signup"          element={<Register />} />
+          <Route path="/register"        element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
           {/* Protected checkout */}
           <Route path="/checkout" element={

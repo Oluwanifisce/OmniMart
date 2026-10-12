@@ -193,23 +193,14 @@ const Login = () => {
             </div>
 
             <div className="text-end mb-3" style={{ marginTop: '-8px' }}>
-              <button
-                type="button"
-                style={{ background: 'none', border: 'none', padding: 0, fontSize: '12px',
-                  color: '#64748B', cursor: 'pointer', textDecoration: 'underline' }}
-                onClick={async () => {
-                  const email = formik.values.email
-                  if (!email) { formik.setStatus('Enter your email above first, then click Forgot Password.'); return }
-                  try {
-                    await api.post('/auth/forgot-password', { email })
-                    formik.setStatus('✅ Password reset email sent! Check your inbox.')
-                  } catch {
-                    formik.setStatus('Could not send reset email. Please try again.')
-                  }
-                }}
+              <Link
+                to="/forgot-password"
+                style={{ fontSize: '12px', color: '#64748B', textDecoration: 'none', fontWeight: 500 }}
+                onMouseEnter={(e) => (e.target.style.textDecoration = 'underline')}
+                onMouseLeave={(e) => (e.target.style.textDecoration = 'none')}
               >
                 Forgot Password?
-              </button>
+              </Link>
             </div>
 
             <button type="submit" className="btn btn-primary w-100" disabled={formik.isSubmitting}>
