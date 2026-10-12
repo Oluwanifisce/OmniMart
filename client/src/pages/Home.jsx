@@ -81,13 +81,15 @@ const Home = () => {
     ? searchParams.get('category')
     : userCategory
 
-  const handleCategoryChange = (newCat) => {
+  const handleCategoryChange = (newCategory) => {
+    // Instantly wipe old memory data arrays to completely prevent visual state ghosting
     setProducts([])
-    setUserCategory(newCat)
+    setLoading(true)
+    setUserCategory(newCategory)
     setSort('')
     setPage(1)
-    if (newCat) setSearchParams({ category: newCat })
-    else        setSearchParams({})
+    if (newCategory) setSearchParams({ category: newCategory })
+    else             setSearchParams({})
   }
 
   // Smooth scroll to catalog view on category or search parameter change
@@ -115,9 +117,12 @@ const Home = () => {
 
   // Load products (MongoDB Atlas Only)
   useEffect(() => {
+    // Instantly wipe old memory data arrays to completely prevent visual state ghosting
+    setProducts([])
+    setLoading(true)
+
     const makeRequest = async () => {
       try {
-        setLoading(true)
         const currentSort = searchParams.get('sort') || sort
         const isNewest = currentSort === 'newest'
         const activeCategory = category || userCategory
@@ -453,12 +458,20 @@ const Home = () => {
 
           {/* ── Product grid ── */}
           {loading ? (
-            <div className="row g-3">
-              {[1,2,3,4,5,6,7,8].map(i => (
-                <div key={i} className="col-6 col-md-4 col-lg-3">
-                  <div className="skeleton" style={{ height: '320px', borderRadius: '14px' }} />
+            <div>
+              <div className="d-flex align-items-center justify-content-center py-4 mb-3 text-muted" style={{ gap: '10px' }}>
+                <div className="spinner-border spinner-border-sm text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
                 </div>
-              ))}
+                <span style={{ fontSize: '14px', fontWeight: 600 }}>Loading products...</span>
+              </div>
+              <div className="row g-3">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                  <div key={i} className="col-6 col-md-4 col-lg-3">
+                    <div className="skeleton" style={{ height: '320px', borderRadius: '14px' }} />
+                  </div>
+                ))}
+              </div>
             </div>
           ) : products.length === 0 ? (
             <div className="text-center py-5">
