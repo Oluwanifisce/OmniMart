@@ -1,17 +1,13 @@
 const nodemailer = require('nodemailer');
 
-// Configure Nodemailer transporter optimized for Gmail SMTP
+// Configure Nodemailer transporter for Gmail
+// NOTE: Do NOT set host/port/secure when using service:'gmail' — those override
+// Gmail's known-good settings and cause ETIMEDOUT on Vercel serverless functions.
 const transporter = nodemailer.createTransport({
   service: 'gmail',
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // SSL/TLS
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false, // Accept self-signed certs in dev
   },
 });
 
@@ -48,8 +44,8 @@ const sendEmail = async (to, subject, text, html = '') => {
     console.log(`[Email] Sent to ${to} | Subject: "${subject}" | ID: ${info.messageId}`);
     return info;
   } catch (error) {
-    console.error(`[Email Error] Failed to send to ${to}:`, error.message);
-    throw new Error('Email sending failed');
+    console.error(`[Email Error] Failed to send to ${to} | Subject: "${subject}":`, error);
+    throw new Error(`Email sending failed: ${error.message}`);
   }
 };
 

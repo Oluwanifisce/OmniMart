@@ -473,15 +473,32 @@ const loginUser = async (req, res) => {
       });
     }
 
-    const isUser = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    // Normalize: trim whitespace + lowercase to prevent case/whitespace mismatches
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const isUser = await User.findOne({ email: normalizedEmail }).select('+password');
 
     if (!isUser) {
-      return res.status(400).json({ message: 'account does not exist' });
+      return res.status(400).json({ message: 'Account does not exist.' });
     }
 
-    const isMatch = await isUser.comparePassword(password);
+    if (!isUser.password) {
+      return res.status(400).json({
+        message: 'This account uses Google Sign-In. Please log in with Google.',
+      });
+    }
+
+    // Primary: use Mongoose instance method. Fallback: direct bcrypt.compare
+    let isMatch = false;
+    try {
+      isMatch = await isUser.comparePassword(password);
+    } catch (compareErr) {
+      console.warn('[Login] comparePassword method failed, using direct bcrypt.compare:', compareErr.message);
+      isMatch = await bcrypt.compare(password, isUser.password);
+    }
+
     if (!isMatch) {
-      return res.status(400).json({ message: 'invalid credentials' });
+      return res.status(400).json({ message: 'Invalid credentials. Please check your password.' });
     }
 
     const token = generateToken(isUser);
@@ -508,8 +525,8 @@ const loginUser = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Login Error:', error);
-    return res.status(400).json({ message: 'invalid credentials' });
+    console.error('[Login Error]:', error);
+    return res.status(500).json({ message: 'Login failed. Please try again.' });
   }
 };
 
@@ -727,7 +744,7 @@ const forgotPassword = async (req, res) => {
 
     return res.status(200).json({ message: 'If that email is registered, a reset code has been sent.' });
   } catch (error) {
-    console.error('[Forgot Password Error]', error.message);
+    console.error('[Forgot Password Error]', error);
     return res.status(500).json({ message: 'Failed to send reset email. Please try again.' });
   }
 };
