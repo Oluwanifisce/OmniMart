@@ -96,19 +96,28 @@ export default function Checkout({ cart: propCart, user: propUser, totalAmount: 
         callback_url: `${window.location.origin}/checkout/success`,
       }
 
-      let data
+      let data = null
       try {
-        const response = await fetch('/api/checkout/initialize', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        })
-        data = await response.json()
-      } catch (fetchErr) {
-        // Fallback to axios endpoint
-        console.warn('Direct fetch error, trying API client:', fetchErr.message)
+        // Prioritize configured API client with full baseURL & credential headers
         const res = await api.post('/checkout/initialize', payload)
         data = res.data
+      } catch (apiErr) {
+        console.warn('API client post error, trying direct fetch:', apiErr.response?.data || apiErr.message)
+        try {
+          const response = await fetch('/api/checkout/initialize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+          if (response.ok) {
+            data = await response.json()
+          } else {
+            const errData = await response.json().catch(() => null)
+            throw new Error(errData?.error || errData?.message || apiErr.response?.data?.error || apiErr.response?.data?.message || apiErr.message)
+          }
+        } catch (fetchErr) {
+          throw new Error(apiErr.response?.data?.error || apiErr.response?.data?.message || fetchErr.message || 'Payment initialization failed')
+        }
       }
 
       if (data && data.authorization_url) {
@@ -120,7 +129,7 @@ export default function Checkout({ cart: propCart, user: propUser, totalAmount: 
       }
     } catch (err) {
       console.error('Checkout error:', err)
-      alert('Could not initialize transaction session. Please try again.')
+      alert(err.message || 'Could not initialize transaction session. Please try again.')
       setLoading(false)
     }
   }
