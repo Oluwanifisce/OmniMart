@@ -43,7 +43,7 @@ const orderSchema = new mongoose.Schema(
       street: { type: String, required: true },
       city: { type: String, required: true },
       state: { type: String, default: '' },
-      postalCode: { type: String, required: true },
+      postalCode: { type: String, default: '100001' },
       country: { type: String, required: true },
     },
     paymentInfo: {

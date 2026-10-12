@@ -57,7 +57,7 @@ const Checkout = () => {
       state: '',
       postalCode: '',
       country: 'Nigeria',
-      paymentMethod: 'card', // card | paypal | cod
+      paymentMethod: 'card', // card | opay | cod
       cardNumber: '',
       cardExp: '',
       cardCvc: '',
@@ -97,11 +97,11 @@ const Checkout = () => {
             street: values.street,
             city: values.city,
             state: values.state,
-            postalCode: values.postalCode,
+            postalCode: values.postalCode || '100001',
             country: values.country,
             phone: values.phone,
           },
-          paymentMethod: values.paymentMethod === 'card' ? 'Credit Card' : values.paymentMethod === 'paypal' ? 'PayPal' : 'Cash on Delivery',
+          paymentMethod: values.paymentMethod === 'card' ? 'Credit Card' : values.paymentMethod === 'opay' ? 'OPay' : 'Cash on Delivery',
           shippingOption,
         }
 
@@ -371,11 +371,20 @@ const Checkout = () => {
 
                   <div className="d-flex flex-column gap-2 mb-3">
                     {[
-                      { id: 'card', label: '💳 Credit or Debit Card' },
-                      { id: 'paypal', label: '🅿️ PayPal' },
-                      { id: 'cod', label: '💵 Cash on Delivery' },
+                      { id: 'card', label: '💳 Credit or Debit Card', badge: null },
+                      { id: 'opay', label: 'Pay with OPay (Bank Transfer / Wallet)', badge: 'OPay' },
+                      { id: 'cod', label: '💵 Cash on Delivery', badge: null },
                     ].map((opt) => (
-                      <label key={opt.id} className="d-flex align-items-center gap-3 p-3 border rounded" style={{ cursor: 'pointer', background: formik.values.paymentMethod === opt.id ? '#F8FAFC' : '#fff', borderColor: formik.values.paymentMethod === opt.id ? '#0F172A' : '#E2E8F0' }}>
+                      <label
+                        key={opt.id}
+                        className="d-flex align-items-center gap-3 p-3 border rounded"
+                        style={{
+                          cursor: 'pointer',
+                          background: formik.values.paymentMethod === opt.id ? (opt.id === 'opay' ? '#F0FDF4' : '#F8FAFC') : '#fff',
+                          borderColor: formik.values.paymentMethod === opt.id ? (opt.id === 'opay' ? '#00C26D' : '#0F172A') : '#E2E8F0',
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
                         <input
                           type="radio"
                           name="paymentMethod"
@@ -383,10 +392,103 @@ const Checkout = () => {
                           checked={formik.values.paymentMethod === opt.id}
                           onChange={formik.handleChange}
                         />
-                        <span style={{ fontSize: '14px', fontWeight: 600 }}>{opt.label}</span>
+                        <span style={{ fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          {opt.badge && (
+                            <span
+                              style={{
+                                background: '#00C26D',
+                                color: '#ffffff',
+                                fontWeight: 800,
+                                fontSize: '11px',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                letterSpacing: '0.05em',
+                                boxShadow: '0 1px 2px rgba(0, 194, 109, 0.2)',
+                              }}
+                            >
+                              {opt.badge}
+                            </span>
+                          )}
+                          {opt.label}
+                        </span>
                       </label>
                     ))}
                   </div>
+
+                  {/* OPay Payment Option Layout */}
+                  {formik.values.paymentMethod === 'opay' && (
+                    <div
+                      className="p-3 rounded border mb-3"
+                      style={{
+                        background: '#F0FDF4',
+                        borderColor: '#86EFAC',
+                        borderLeft: '4px solid #00C26D',
+                      }}
+                    >
+                      <div className="d-flex align-items-center justify-content-between mb-2">
+                        <div className="d-flex align-items-center gap-2">
+                          <span
+                            style={{
+                              background: '#00C26D',
+                              color: '#fff',
+                              fontWeight: 900,
+                              fontSize: '12px',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              letterSpacing: '0.08em',
+                            }}
+                          >
+                            OPay
+                          </span>
+                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#065F46' }}>
+                            Fast & Secure Nigerian Checkout
+                          </span>
+                        </div>
+                        <span
+                          style={{
+                            background: '#DCFCE7',
+                            color: '#15803D',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            padding: '3px 8px',
+                            borderRadius: '12px',
+                            border: '1px solid #86EFAC',
+                          }}
+                        >
+                          ⚡ Instant Confirmation
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '13px', color: '#166534', marginBottom: '12px', lineHeight: 1.5 }}>
+                        Pay effortlessly using your <strong>OPay Wallet</strong> or make an instant <strong>Bank Transfer</strong> directly to our secure OmniMart merchant account. Zero transaction delays.
+                      </p>
+                      <div className="p-2.5 rounded bg-white border d-flex align-items-center justify-content-between" style={{ borderColor: '#BBF7D0' }}>
+                        <div className="d-flex align-items-center gap-2">
+                          <span style={{ fontSize: '18px' }}>🏦</span>
+                          <div>
+                            <div style={{ fontSize: '12px', fontWeight: 700, color: '#0F172A' }}>
+                              OPay Direct Wallet & Bank Transfer
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#64748B' }}>
+                              Instant auto-reconciliation with zero gateway fees
+                            </div>
+                          </div>
+                        </div>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            color: '#00C26D',
+                            background: '#F0FDF4',
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            border: '1px solid #86EFAC',
+                          }}
+                        >
+                          Active
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Card input fields */}
                   {formik.values.paymentMethod === 'card' && (

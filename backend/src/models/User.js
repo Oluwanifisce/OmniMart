@@ -66,6 +66,14 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    otpCode: {
+      type: String,
+      default: undefined,
+    },
+    otpExpires: {
+      type: Date,
+      default: undefined,
+    },
   },
   {
     timestamps: true,
@@ -83,6 +91,10 @@ userSchema.virtual('name').get(function () {
 // Hash password prior to saving
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
+    return next();
+  }
+  // Prevent double-hashing if password has already been hashed (e.g. by bcrypt.hash)
+  if (typeof this.password === 'string' && (this.password.startsWith('$2a$') || this.password.startsWith('$2b$'))) {
     return next();
   }
   try {

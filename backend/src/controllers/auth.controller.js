@@ -696,9 +696,13 @@ const forgotPassword = async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
+    user.otpCode = otp;
+    user.otpExpires = expiresAt;
+    await user.save({ validateBeforeSave: false });
+
     await OTPVerification.findOneAndUpdate(
       { email: user.email },
-      { email: user.email, otp, expiresAt, purpose: 'password_reset' },
+      { email: user.email, otp, otpCode: otp, expiresAt, purpose: 'password_reset' },
       { upsert: true, new: true }
     );
 
@@ -728,6 +732,68 @@ const forgotPassword = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/v1/auth/reset-password
+ * Handles token/OTP validation checks and resets user password
+ */
+const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, otpCode, token, newPassword, password } = req.body;
+    const effectiveOtp = String(otp || otpCode || token || '').trim();
+    const effectivePassword = newPassword || password;
+
+    if (!email || !effectiveOtp || !effectivePassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email, verification code, and new password are required.',
+      });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Account not found.',
+      });
+    }
+
+    // Verify OTP match against User model or OTPVerification record
+    const otpRecord = await OTPVerification.findOne({ email: user.email });
+    const isUserOtpMatch = user.otpCode && String(user.otpCode).trim() === effectiveOtp;
+    const isRecordOtpMatch = otpRecord && String(otpRecord.otpCode || otpRecord.otp || '').trim() === effectiveOtp;
+
+    if (!isUserOtpMatch && !isRecordOtpMatch) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired verification code.',
+      });
+    }
+
+    // Explicit password updates mapping handler
+    const hashedPassword = await bcrypt.hash(effectivePassword, 12);
+    user.password = hashedPassword;
+    user.otpCode = undefined; // Clear the temporary OTP code variable state
+    user.otpExpires = undefined;
+    await user.save();
+
+    // Clean up OTPVerification record if present
+    if (otpRecord) {
+      await OTPVerification.deleteMany({ email: user.email });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password reset successfully. You can now log in with your new password.',
+    });
+  } catch (error) {
+    console.error('[Reset Password Error]', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to reset password. Please try again.',
+    });
+  }
+};
+
 module.exports = {
   registerUser,
   registerVendor,
@@ -738,6 +804,8 @@ module.exports = {
   getMe,
   googleAuth,
   forgotPassword,
+  resetPassword,
+  verifyResetCode: resetPassword,
   register: registerUser,
   login: loginUser,
 };

@@ -9,6 +9,7 @@ const {
   googleAuth,
   verifyOTP,
   forgotPassword,
+  resetPassword,
 } = require('../controllers/auth.controller');
 
 const router = express.Router();
@@ -30,6 +31,11 @@ router.post('/auth/verify-otp', verifyOTP);
 
 // POST /api/v1/auth/forgot-password — Send password reset OTP email
 router.post('/auth/forgot-password', forgotPassword);
+
+// POST /api/v1/auth/reset-password — Verify reset code & update password
+router.post('/auth/reset-password', resetPassword);
+router.post('/reset-password', resetPassword);
+router.post('/auth/verify-reset-code', resetPassword);
 
 // GET /api/v1/getusers
 router.get('/getusers', verifyUser, getUsers);
