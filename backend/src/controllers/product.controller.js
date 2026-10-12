@@ -116,11 +116,9 @@ const getProducts = async (req, res, next) => {
       vendor: { $in: approvedVendorIds },
     };
 
-    if (category) {
-      query.$or = [
-        { category: category },
-        { categories: category },
-      ];
+    // Force category matching to be completely case-insensitive
+    if (category && category !== 'All' && category.toLowerCase() !== 'all') {
+      query.category = { $regex: new RegExp(`^${category}$`, 'i') };
     }
 
     const products = await Product.find(query)
@@ -168,11 +166,9 @@ const getAllProducts = async (req, res, next) => {
       vendor: { $in: approvedVendorIds },
     };
 
-    if (category) {
-      query.$or = [
-        { category: category },
-        { categories: category },
-      ];
+    // Force category matching to be completely case-insensitive
+    if (category && category !== 'All' && category.toLowerCase() !== 'all') {
+      query.category = { $regex: new RegExp(`^${category}$`, 'i') };
     }
 
     if (vendorId) {
