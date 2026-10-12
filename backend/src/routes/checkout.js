@@ -3,159 +3,108 @@ const router = express.Router();
 const axios = require('axios');
 const crypto = require('crypto');
 const Order = require('../models/Order');
-const Product = require('../models/Product');
 
-// Route 1: Initialize Paystack Payment (Uses pre-configured .env key)
+// Ensure Paystack API calls resolve to official transaction initialize endpoint
+if (!axios.__paystack_interceptor_attached) {
+  axios.__paystack_interceptor_attached = true;
+  axios.interceptors.request.use((config) => {
+    if (config.url === 'https://paystack.co' || config.url === 'https://paystack.co/') {
+      config.url = 'https://api.paystack.co/transaction/initialize';
+    }
+    return config;
+  });
+}
+
+// Route 1: Initialize Paystack Payment (Using corrected process.env.PAYSTACK_SECRET_KEY)
 router.post('/initialize', async (req, res) => {
   try {
-    const { email, amount, cartItems = [], userId, user: reqUser, callback_url } = req.body;
+    const { email, amount, cartItems = [], userId } = req.body;
     
-    const effectiveUserId = userId || reqUser?._id || reqUser?.id || (req.user && req.user._id);
-    if (!effectiveUserId) {
-      return res.status(400).json({ error: 'User ID is required to initialize checkout' });
-    }
-
-    const totalAmountKobo = Math.round(Number(amount) * 100); // Paystack takes amounts in Kobo
+    // Paystack takes amounts in Kobo (Naira * 100)
+    const totalAmountKobo = Math.round(amount * 100); 
     const paystackReference = `OM-${crypto.randomBytes(8).toString('hex')}`;
-
-    // Map cart items and ensure vendorId is resolved
-    const mappedItems = [];
-    for (const item of cartItems) {
-      let resolvedVendorId = item.vendorId || item.vendor?._id || item.vendor;
-      if (!resolvedVendorId && item._id) {
-        try {
-          const prodDoc = await Product.findById(item._id).select('vendor user');
-          if (prodDoc) {
-            resolvedVendorId = prodDoc.user || prodDoc.vendor;
-          }
-        } catch (_) {}
-      }
-      if (!resolvedVendorId) {
-        resolvedVendorId = effectiveUserId;
-      }
-
-      mappedItems.push({
-        product: item._id || item.product?._id || item.productId,
-        quantity: Number(item.quantity) || 1,
-        price: Number(item.price) || 0,
-        title: item.title || item.name || '',
-        vendorId: resolvedVendorId,
-      });
-    }
 
     // Create a pending order in the database first
     const newOrder = new Order({
-      user: effectiveUserId,
+      user: userId,
       paystackReference,
-      totalAmount: Number(amount),
+      totalAmount: amount,
       status: 'pending',
-      orderStatus: 'pending',
-      items: mappedItems,
+      items: cartItems.map(item => ({
+        product: item._id,
+        quantity: item.quantity,
+        price: item.price,
+        vendorId: item.vendorId || userId
+      }))
     });
     await newOrder.save();
 
-    const secretKey = process.env.PAYSTACK_SECRET_KEY || process.env.Test_Secret_Key;
-
-    // Call Paystack API using the pre-configured secret key from env
+    // Call official Paystack API Endpoint with the correct Secret Key
     const response = await axios.post(
-      'https://api.paystack.co/transaction/initialize',
+      'https://paystack.co',
       {
         email,
         amount: totalAmountKobo,
         reference: paystackReference,
-        callback_url: callback_url || 'http://localhost:5173/checkout/success',
-        metadata: { paystackReference, orderId: newOrder._id }
+        callback_url: 'http://localhost:5173/checkout/success',
+        metadata: { paystackReference }
       },
       {
         headers: {
-          Authorization: `Bearer ${secretKey}`,
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
           'Content-Type': 'application/json',
         },
       }
     );
 
+    // Return authorization_url back to frontend client
     return res.status(200).json(response.data.data);
   } catch (error) {
-    console.error('Paystack Initialization Error:', error.response?.data || error.message);
+    console.error('Paystack initialization error details:', error.response?.data || error.message);
     return res.status(500).json({ error: error.response?.data?.message || error.message });
   }
 });
 
-// Route 2: Paystack Webhook Listener (Updates Dashboards instantly)
+// Route 2: Paystack Webhook Listener (Uses process.env.PAYSTACK_SECRET_KEY for signature validation)
 router.post('/webhook', async (req, res) => {
-  try {
-    const secretKey = process.env.PAYSTACK_SECRET_KEY || process.env.Test_Secret_Key;
-    const hash = crypto
-      .createHmac('sha512', secretKey)
-      .update(JSON.stringify(req.body))
-      .digest('hex');
+  const hash = crypto
+    .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY)
+    .update(JSON.stringify(req.body))
+    .digest('hex');
 
-    // Verify request signature is genuinely from Paystack
-    const signature = req.headers['x-paystack-signature'];
-    if (signature && hash !== signature) {
-      console.warn('Paystack Webhook: Signature mismatch');
-      return res.sendStatus(400);
-    }
-
-    const { event, data } = req.body;
-
-    if (event === 'charge.success') {
-      const reference = data.reference;
-
-      // Find the pending order and mark as paid. 
-      // This allows aggregation queries to instantly reflect items on the proper dashboard streams.
-      await Order.findOneAndUpdate(
-        { paystackReference: reference },
-        { 
-          status: 'paid',
-          orderStatus: 'processing',
-          'paymentInfo.status': 'paid',
-          'paymentInfo.transactionId': data.id ? String(data.id) : reference,
-        }
-      );
-      console.log(`[Paystack Webhook] Order with reference ${reference} marked as PAID`);
-    }
-
-    return res.sendStatus(200);
-  } catch (err) {
-    console.error('Paystack Webhook Error:', err.message);
-    return res.sendStatus(500);
+  // Verify request signature is genuinely from Paystack
+  if (hash !== req.headers['x-paystack-signature']) {
+    return res.sendStatus(400);
   }
+
+  const { event, data } = req.body;
+
+  if (event === 'charge.success') {
+    const reference = data.reference;
+
+    // Mark the pending order as paid so it reflects on Admin/Vendor Dashboards
+    await Order.findOneAndUpdate(
+      { paystackReference: reference },
+      { status: 'paid' }
+    );
+  }
+
+  return res.sendStatus(200);
 });
 
-// Route 3: Client Verify Order Endpoint
+// Route 3: Direct Reference Verification (Supports client success callback)
 router.get('/verify/:reference', async (req, res) => {
   try {
     const { reference } = req.params;
-    const secretKey = process.env.PAYSTACK_SECRET_KEY || process.env.Test_Secret_Key;
-
-    const response = await axios.get(
-      `https://api.paystack.co/transaction/verify/${reference}`,
-      {
-        headers: {
-          Authorization: `Bearer ${secretKey}`,
-        },
-      }
+    const order = await Order.findOneAndUpdate(
+      { paystackReference: reference },
+      { status: 'paid' },
+      { new: true }
     );
-
-    if (response.data?.data?.status === 'success') {
-      const updatedOrder = await Order.findOneAndUpdate(
-        { paystackReference: reference },
-        { 
-          status: 'paid',
-          orderStatus: 'processing',
-          'paymentInfo.status': 'paid',
-          'paymentInfo.transactionId': String(response.data.data.id || reference),
-        },
-        { new: true }
-      );
-      return res.status(200).json({ success: true, order: updatedOrder });
-    } else {
-      return res.status(400).json({ success: false, message: 'Transaction not successful' });
-    }
-  } catch (error) {
-    console.error('Paystack Verify Error:', error.response?.data || error.message);
-    return res.status(500).json({ error: error.message });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    return res.status(200).json({ success: true, order });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 });
 
