@@ -3,11 +3,18 @@ import axios from 'axios'
 axios.defaults.withCredentials = true
 
 // ── API Base URL ──────────────────────────────────────────────────────────────
-// Development:  Vite proxy intercepts '/api/v1' and forwards to localhost:5000
-// Production:   VITE_API_URL must be set in Vercel/hosting env vars
-//               e.g. https://omnimart-api.onrender.com/api/v1
+// Production backend is always https://omni-mart-f6k9.vercel.app/api/v1
+// VITE_API_URL in Vercel dashboard overrides this if set (takes priority)
+const PRODUCTION_BACKEND = 'https://omni-mart-f6k9.vercel.app/api/v1'
+const resolvedBaseURL = import.meta.env.VITE_API_URL || PRODUCTION_BACKEND
+
+// Boot log — visible in browser devtools so you can confirm which URL is active
+if (import.meta.env.DEV) {
+  console.log('[OmniMart API] baseURL:', resolvedBaseURL)
+}
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://omni-mart-f6k9.vercel.app/api/v1',
+  baseURL: resolvedBaseURL,
   timeout: 15000,
   withCredentials: true,
 })

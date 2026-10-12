@@ -21,8 +21,9 @@ export default function CheckoutSuccess() {
       }
 
       try {
+        const PROD_API = 'https://omni-mart-f6k9.vercel.app/api/v1'
         const res = await api.get(`/checkout/verify/${reference}`).catch(async () => {
-          return await fetch(`/api/checkout/verify/${reference}`).then(r => r.json())
+          return await fetch(`${PROD_API}/checkout/verify/${reference}`).then(r => r.json())
         })
         const data = res.data || res
         if (data.success || data.order) {

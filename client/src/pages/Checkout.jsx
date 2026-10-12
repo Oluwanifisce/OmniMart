@@ -98,12 +98,22 @@ export default function Checkout({ cart: propCart, user: propUser, totalAmount: 
 
       let data = null
 
-      // Three-tier fallback: API client → Vite proxy fetch → absolute production URL
+      // Two-tier fallback: configured api client (absolute URL) → direct absolute production URL
+      // NOTE: Relative /api/ paths are NOT used — the frontend and backend are on separate Vercel domains.
       const PROD_API = 'https://omni-mart-f6k9.vercel.app/api/v1'
+      const token = localStorage.getItem('token')
+      const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {}
+
       const endpoints = [
         () => api.post('/checkout/initialize', payload).then(r => r.data),
-        () => fetch('/api/checkout/initialize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(async r => { if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || e.message || `HTTP ${r.status}`) } return r.json() }),
-        () => fetch(`${PROD_API}/checkout/initialize`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(async r => { if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || e.message || `HTTP ${r.status}`) } return r.json() }),
+        () => fetch(`${PROD_API}/checkout/initialize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeader },
+          body: JSON.stringify(payload),
+        }).then(async r => {
+          if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || e.message || `HTTP ${r.status}`) }
+          return r.json()
+        }),
       ]
 
       let lastErr = null
