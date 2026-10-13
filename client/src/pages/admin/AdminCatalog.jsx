@@ -125,7 +125,7 @@ const AdminCatalog = () => {
     } catch (e) { alert(e.response?.data?.message || 'Delete failed') }
   }
 
-  const fmt = (n) => `$${Number(n||0).toFixed(2)}`
+  const fmt = (n) => `₦${Number(n||0).toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 
   // ── Category stats ──
   const catStats = CATEGORY_LIST.map(c => ({

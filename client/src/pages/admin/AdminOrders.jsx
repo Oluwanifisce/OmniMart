@@ -64,7 +64,7 @@ const AdminOrders = () => {
     return matchStatus && matchSearch
   })
 
-  const fmt = n => `$${Number(n || 0).toFixed(2)}`
+  const fmt = n => `₦${Number(n || 0).toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 
   return (
     <div>
